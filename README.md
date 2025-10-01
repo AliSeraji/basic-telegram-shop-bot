@@ -1,6 +1,6 @@
-# 🛒 Telegram Online Shop Bot
+# 🛒 Basic Telegram Shop Bot
 
-A fully functional Telegram bot for managing an online store, built with **NestJS** and **node-telegram-bot-api**. It supports both user and admin roles and is designed to simplify e-commerce through a friendly Telegram interface — in Persian language 🇺🇿.
+A fully functional Telegram bot for managing an online store, built with **NestJS** and **node-telegram-bot-api**. It supports both user and admin roles — in Persian language.
 
 ---
 
