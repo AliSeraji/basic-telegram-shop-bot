@@ -12,4 +12,8 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   isAdmin?: boolean;
+
+  @IsString()
+  @IsOptional()
+  userAddress: string;
 }

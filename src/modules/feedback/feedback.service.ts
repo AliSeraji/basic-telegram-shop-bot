@@ -19,7 +19,7 @@ export class FeedbackService {
   async create(dto: CreateFeedbackDto): Promise<Feedback> {
     const user = await this.userService.findByTelegramId(dto.telegramId);
     const product = await this.productService.findOne(dto.productId);
-    if (!user || !product) throw new Error('Foydalanuvchi yoki mahsulot topilmadi');
+    if (!user || !product) throw new Error('User or product not found!');
 
     return this.feedbackRepository.save({
       user,
@@ -37,7 +37,7 @@ export class FeedbackService {
   async findOne(id: number): Promise<Feedback> {
     const feedback = await this.feedbackRepository.findOne({ where: { id }, relations: ['user', 'product'] });
     if (!feedback) {
-      throw new NotFoundException(`ID ${id} bo'yicha feedback topilmadi`);
+      throw new NotFoundException(`No feedback found for ID ${id}`);
     }
     return feedback;
   }
@@ -45,7 +45,7 @@ export class FeedbackService {
   async update(id: number, dto: UpdateFeedbackDto): Promise<Feedback> {
     const result = await this.feedbackRepository.update(id, dto);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha feedback topilmadi`);
+      throw new NotFoundException(`No feedback found for ID ${id} `);
     }
     return this.findOne(id);
   }
@@ -53,7 +53,7 @@ export class FeedbackService {
   async remove(id: number): Promise<void> {
     const result = await this.feedbackRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha feedback topilmadi`);
+      throw new NotFoundException(`No feedback found for ID ${id}`);
     }
   }
 }

@@ -26,7 +26,7 @@ export class UserService {
       }
       return user;
     } catch (error) {
-      throw new Error(`Foydalanuvchi ro‘yxatdan o‘tkazishda xato: ${error.message}`);
+      throw new Error(`Error in user registration: ${error.message}`);
     }
   }
 
@@ -35,7 +35,7 @@ export class UserService {
       where: { telegramId },
       relations: ['orders', 'cartItems', 'feedbacks'],
     });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+    if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
@@ -44,7 +44,7 @@ export class UserService {
       where: { id },
       relations: ['orders', 'cartItems', 'feedbacks'],
     });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+    if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
@@ -66,7 +66,7 @@ export class UserService {
 
   async updateLanguage(telegramId: string, language: string): Promise<User> {
     if (!['uz', 'ru'].includes(language)) {
-      throw new Error('Noto‘g‘ri til tanlandi. Faqat "uz" yoki "ru" ruxsat etiladi.');
+      throw new Error('Wrong language selected. Only "uz" or "ru" are allowed.');
     }
     const user = await this.findByTelegramId(telegramId);
     user.language = language;
@@ -76,7 +76,7 @@ export class UserService {
   async remove(id: number): Promise<void> {
     const result = await this.userRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException('Foydalanuvchi topilmadi');
+      throw new NotFoundException('User not found');
     }
   }
 

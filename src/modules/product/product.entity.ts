@@ -16,10 +16,7 @@ export class Product {
   description: string;
 
   @Column({ nullable: true })
-  nameRu: string;
-
-  @Column({ nullable: true })
-  descriptionRu: string;
+  nameJP: string;
 
   @Column()
   price: number;

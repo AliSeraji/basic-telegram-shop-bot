@@ -17,7 +17,7 @@ export class DeliveryService {
 
   async create(dto: CreateDeliveryDto): Promise<Delivery> {
     const order = await this.orderService.findOne(dto.orderId);
-    if (!order) throw new NotFoundException(`Order ID ${dto.orderId} topilmadi`);
+    if (!order) throw new NotFoundException(`Order ID ${dto.orderId} was not found!`);
 
     const delivery = this.deliveryRepository.create({
       order,
@@ -26,7 +26,7 @@ export class DeliveryService {
       addressDetails: dto.addressDetails,
       status: DELIVERY_STATUS.PENDING,
       courierName: 'Ali Valiev',
-      courierPhone: '+998901234567',
+      courierPhone: '+988901234567',
       deliveryDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
       createdAt: new Date(),
     });
@@ -47,7 +47,7 @@ export class DeliveryService {
       where: { id },
       relations: ['order', 'order.user'],
     });
-    if (!delivery) throw new NotFoundException(`Delivery ID ${id} topilmadi`);
+    if (!delivery) throw new NotFoundException(`Delivery ID ${id} was not found!`);
     return delivery;
   }
 
@@ -56,7 +56,7 @@ export class DeliveryService {
       where: { order: { id: orderId } },
       relations: ['order', 'order.user'],
     });
-    if (!delivery) throw new NotFoundException(`Order ID ${orderId} uchun yetkazib berish topilmadi`);
+    if (!delivery) throw new NotFoundException(`Delivery not found for Order ID ${orderId}`);
     return delivery;
   }
 
@@ -79,7 +79,7 @@ export class DeliveryService {
   async remove(id: number): Promise<void> {
     const result = await this.deliveryRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`Delivery ID ${id} topilmadi`);
+      throw new NotFoundException(`Delivery ID ${id} was not found!`);
     }
   }
 }

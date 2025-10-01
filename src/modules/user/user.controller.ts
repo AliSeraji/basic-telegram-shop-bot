@@ -10,9 +10,9 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Yangi foydalanuvchi ro‘yxatdan o‘tkazish' })
-  @ApiResponse({ status: 201, description: 'Foydalanuvchi muvaffaqiyatli yaratildi.' })
-  @ApiResponse({ status: 400, description: 'Noto‘g‘ri so‘rov.' })
+  @ApiOperation({ summary: 'New user registration' })
+  @ApiResponse({ status: 201, description: 'User successfully created.' })
+  @ApiResponse({ status: 400, description: 'Invalid request.' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.registerUser(createUserDto);
   }
@@ -23,40 +23,40 @@ export class UserController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Barcha foydalanuvchilarni olish' })
-  @ApiResponse({ status: 200, description: 'Foydalanuvchilar ro‘yxati.' })
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, description: `Users' list` })
   findAll() {
     return this.userService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Foydalanuvchini ID bo‘yicha olish' })
-  @ApiResponse({ status: 200, description: 'Foydalanuvchi topildi.' })
-  @ApiResponse({ status: 404, description: 'Foydalanuvchi topilmadi.' })
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User found.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   findOne(@Param('id') id: string) {
     return this.userService.findOne(+id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Foydalanuvchi ma‘lumotlarini yangilash' })
-  @ApiResponse({ status: 200, description: 'Foydalanuvchi yangilandi.' })
-  @ApiResponse({ status: 404, description: 'Foydalanuvchi topilmadi.' })
+  @ApiOperation({ summary: 'Update user information' })
+  @ApiResponse({ status: 200, description: 'User updated.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(+id, updateUserDto);
   }
 
   @Patch('telegram/:telegramId/phone')
-  @ApiOperation({ summary: 'Foydalanuvchi telefon raqamini yangilash' })
-  @ApiResponse({ status: 200, description: 'Telefon raqami yangilandi.' })
-  @ApiResponse({ status: 404, description: 'Foydalanuvchi topilmadi.' })
+  @ApiOperation({ summary: 'Update user phone number' })
+  @ApiResponse({ status: 200, description: 'Phone number updated.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   updatePhoneNumber(@Param('telegramId') telegramId: string, @Body('phone') phone: string) {
     return this.userService.updatePhoneNumber(telegramId, phone);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Foydalanuvchini o‘chirish' })
-  @ApiResponse({ status: 200, description: 'Foydalanuvchi o‘chirildi.' })
-  @ApiResponse({ status: 404, description: 'Foydalanuvchi topilmadi.' })
+  @ApiOperation({ summary: 'Delete user' })
+  @ApiResponse({ status: 200, description: 'User deleted.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   remove(@Param('id') id: string) {
     return this.userService.remove(+id);
   }

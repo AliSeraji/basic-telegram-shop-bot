@@ -26,7 +26,7 @@ export class CategoryService {
   async findOne(id: number): Promise<Category> {
     const category = await this.categoryRepository.findOneBy({ id });
     if (!category) {
-      throw new NotFoundException(`ID ${id} bo'yicha kategoriya topilmadi`);
+      throw new NotFoundException(`Category not found by ID : ${id}`);
     }
     return category;
   }
@@ -34,7 +34,7 @@ export class CategoryService {
   async update(id: number, dto: UpdateCategoryDto): Promise<Category> {
     const result = await this.categoryRepository.update(id, dto);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha kategoriya topilmadi`);
+      throw new NotFoundException(`Category not found by ID : ${id}`);
     }
     return this.findOne(id);
   }
@@ -42,7 +42,7 @@ export class CategoryService {
   async remove(id: number): Promise<void> {
     const result = await this.categoryRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha kategoriya topilmadi`);
+      throw new NotFoundException(`Category not found by ID : ${id}`);
     }
   }
 }

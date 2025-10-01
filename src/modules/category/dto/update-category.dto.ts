@@ -7,7 +7,7 @@ export class UpdateCategoryDto {
 
   @IsString()
   @IsOptional()
-  nameRu: string;
+  nameFa: string;
 
   @IsString()
   @IsOptional()
@@ -15,5 +15,5 @@ export class UpdateCategoryDto {
 
   @IsString()
   @IsOptional()
-  descriptionRu: string;
+  descriptionFa: string;
 }

@@ -32,13 +32,13 @@ export class OrderService {
     const user = await this.userService.findByTelegramId(telegramId);
     if (!user) {
       this.logger.error(`User not found for telegramId: ${telegramId}`);
-      throw new NotFoundException('Foydalanuvchi topilmadi');
+      throw new NotFoundException('User not found');
     }
 
     const cartItems = await this.cartService.getCartItems(telegramId);
     if (!cartItems.length) {
       this.logger.error('Cart is empty');
-      throw new Error('Savatcha bo‘sh');
+      throw new Error('Cart is empty');
     }
 
     const order = this.orderRepository.create({
@@ -57,11 +57,11 @@ export class OrderService {
         const product = await this.productService.findOne(item.product.id);
         if (!product) {
           this.logger.error(`Product ID ${item.product.id} not found`);
-          throw new NotFoundException(`Mahsulot ID ${item.product.id} topilmadi`);
+          throw new NotFoundException(`Product ID ${item.product.id} not found`);
         }
         if (product.stock < item.quantity) {
           this.logger.error(`Insufficient stock for product ${product.name}`);
-          throw new Error(`Mahsulot ${product.name} yetarli emas`);
+          throw new Error(`Insufficient stock for Product ${product.name}`);
         }
         totalAmount += item.product.price * item.quantity;
         product.stock -= item.quantity;
@@ -94,23 +94,23 @@ export class OrderService {
     const items = order.orderItems?.map((item) =>
       adminLang === 'uz'
         ? `${item.product.name} - ${item.quantity} dona`
-        : `${item.product.nameRu || item.product.name} - ${item.quantity} шт.`
+        : `${item.product.nameJP || item.product.name} - ${item.quantity} шт.`
     ).join(', ');
 
-    const message = adminLang === 'uz'
-      ? `🔔 <b>Yangi buyurtma yaratildi!</b>\n` +
-        `📋 <b>ID:</b> ${order.id}\n` +
-        `👤 <b>Foydalanuvchi:</b> ${user.fullName || 'Kiritilmagan'}\n` +
-        `📦 <b>Mahsulotlar:</b> ${items || 'N/A'}\n` +
-        `💸 <b>Jami:</b> ${order.totalAmount} so‘m\n` +
-        `📊 <b>Status:</b> ${order.status}\n` +
+    const message = adminLang === 'fa'
+      ? `🔔 <b>سفارش جدیدی ایجاد شده</b>\n` +
+        `📋 <b>شماره سفارش:</b> ${order.id}\n` +
+        `👤 <b>کاربر:</b> ${user.fullName || 'نام کاربر وارد نشده'}\n` +
+        `📦 <b>محصولات:</b> ${items || 'هیچ محصولی وارد نشده'}\n` +
+        `💸 <b>جمع سفارش:</b> ${order.totalAmount} ریال\n` +
+        `📊 <b>وضعیت:</b> ${order.status}\n` +
         `━━━━━━━━━━━━━━━`
-      : `🔔 <b>Новый заказ создан!</b>\n` +
+      : `🔔 <b>A new order has been created!</b>\n` +
         `📋 <b>ID:</b> ${order.id}\n` +
-        `👤 <b>Пользователь:</b> ${user.fullName || 'Не указано'}\n` +
-        `📦 <b>Товары:</b> ${items || 'N/A'}\n` +
-        `💸 <b>Итого:</b> ${order.totalAmount} сум\n` +
-        `📊 <b>Статус:</b> ${order.status}\n` +
+        `👤 <b>User:</b> ${user.fullName || 'Not specified'}\n` +
+        `📦 <b>Products:</b> ${items || 'N/A'}\n` +
+        `💸 <b>Total:</b> ${order.totalAmount} Rial\n` +
+        `📊 <b>Status:</b> ${order.status}\n` +
         `━━━━━━━━━━━━━━━`;
 
     await this.telegramService.sendMessage(admin.telegramId, message, { parse_mode: 'HTML' });
@@ -137,7 +137,7 @@ export class OrderService {
     });
     if (!order) {
       this.logger.error(`Order ID ${id} not found`);
-      throw new NotFoundException(`ID ${id} bo'yicha buyurtma topilmadi`);
+      throw new NotFoundException(`Order not found for ID ${id}`);
     }
     if (!order.user) {
       this.logger.warn(`Order ID ${id} has no associated user`);
@@ -150,7 +150,7 @@ export class OrderService {
     const user = await this.userService.findByTelegramId(telegramId);
     if (!user) {
       this.logger.error(`User not found for telegramId: ${telegramId}`);
-      throw new NotFoundException('Foydalanuvchi topilmadi');
+      throw new NotFoundException('User not found');
     }
     const orders = await this.orderRepository.find({
       where: { user: { id: user.id } },
@@ -167,11 +167,11 @@ export class OrderService {
   order.status = status;
   order.updatedAt = new Date();
   await this.orderRepository.save(order);
-  const language = order.user.language || 'uz';
+  const language = order.user.language || 'fa';
 
-  const message = language === 'uz'
-    ? `📋 Buyurtma #${id} statusi yangilandi: ${status}`
-    : `📋 Статус заказа #${id} обновлён: ${status}`;
+  const message = language === 'fa'
+    ? `${status}: به روز رسانی شد ${id}# وضعیت سفارش📋`
+    : `📋 Order status #${id} has been updated: ${status}`;
 
   await this.telegramService.sendMessage(order.user.telegramId, message, { parse_mode: 'HTML' });
 
@@ -206,6 +206,8 @@ export class OrderService {
     const monthlyStats = {};
     const yearlyStats = {};
     let pendingOrders = 0;
+    let validatedPayments = 0;
+    let InvalidatedPayments = 0;
     let paidOrders = 0;
     let shippedOrders = 0;
     let deliveredOrders = 0;
@@ -213,14 +215,18 @@ export class OrderService {
     let soldProducts = 0;
     let totalAmount = 0;
 
-    const paidStatuses = [ORDER_STATUS.PAID, ORDER_STATUS.SHIPPED, ORDER_STATUS.DELIVERED] as const;
+    const paidStatuses = [ORDER_STATUS.PAYMENT_VALIDATED, ORDER_STATUS.SHIPPED, ORDER_STATUS.DELIVERED] as const;
 
     orders.forEach((order) => {
       if (order.status === ORDER_STATUS.PENDING) {
         pendingOrders++;
       } else if (order.status === ORDER_STATUS.PAID) {
         paidOrders++;
+      } else if(order.status === ORDER_STATUS.PAYMENT_VALIDATED){
+        validatedPayments++;
         totalAmount += order.totalAmount;
+      }else if (order.status === ORDER_STATUS.PAYMENT_INVALIDATED){
+        InvalidatedPayments++;
       } else if (order.status === ORDER_STATUS.SHIPPED) {
         shippedOrders++;
         totalAmount += order.totalAmount;
@@ -231,7 +237,7 @@ export class OrderService {
         cancelledOrders++;
       }
       
-      if (paidStatuses.includes(order.status as typeof ORDER_STATUS.PAID | typeof ORDER_STATUS.SHIPPED | typeof ORDER_STATUS.DELIVERED)) {
+      if (paidStatuses.includes(order.status as typeof ORDER_STATUS.PAYMENT_VALIDATED | typeof ORDER_STATUS.SHIPPED | typeof ORDER_STATUS.DELIVERED)) {
         const month = order.createdAt.toISOString().slice(0, 7);
         const year = order.createdAt.getFullYear();
         monthlyStats[month] = (monthlyStats[month] || 0) + order.totalAmount;

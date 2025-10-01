@@ -7,11 +7,11 @@ export class CreateCategoryDto {
 
   @IsString()
   @IsNotEmpty()
-  nameRu: string;
+  nameFa: string;
 
   @IsString()
   description: string;
 
   @IsString()
-  descriptionRu: string;
+  descriptionFa: string;
 }

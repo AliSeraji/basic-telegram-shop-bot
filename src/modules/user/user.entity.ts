@@ -17,6 +17,12 @@ export class User {
   @Column({ nullable: true })
   phone: string;
 
+  @Column({nullable: true})
+  userAddress: string;
+
+  @Column({nullable: true})
+  email: string;
+
   @Column({ default: false })
   isAdmin: boolean;
 

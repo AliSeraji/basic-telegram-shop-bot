@@ -13,10 +13,10 @@ export class Category {
   description: string;
   
   @Column({ nullable: true })
-  nameRu: string;
+  nameFa: string;
 
   @Column({ nullable: true })
-  descriptionRu: string;
+  descriptionFa: string;
 
 
   @Column()

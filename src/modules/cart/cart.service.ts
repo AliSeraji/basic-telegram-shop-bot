@@ -19,14 +19,14 @@ export class CartService {
   async addToCart(dto: CreateCartDto): Promise<Cart> {
     const user = await this.userService.findByTelegramId(dto.telegramId);
     const product = await this.productService.findOne(dto.productId);
-    if (!user || !product) throw new Error('Foydalanuvchi yoki mahsulot topilmadi');
-    if (product.stock < dto.quantity) throw new Error('Mahsulot yetarli emas');
+    if (!user || !product) throw new Error('User or product not found');
+    if (product.stock < dto.quantity) throw new Error('Not enough product in stock');
 
     const cartItem = await this.cartRepository.findOne({
       where: { user: { id: user.id }, product: { id: product.id } },
       relations: ['product', 'user'],
     });
-
+ 
     if (cartItem) {
       cartItem.quantity += dto.quantity;
       return this.cartRepository.save(cartItem);
@@ -62,7 +62,7 @@ export class CartService {
       where: { id },
       relations: ['product', 'user'],
     });
-    if (!cartItem) throw new NotFoundException(`ID ${id} bo'yicha savatcha topilmadi`);
+    if (!cartItem) throw new NotFoundException(`No cart found by ID : ${id}`);
     Object.assign(cartItem, dto);
     return this.cartRepository.save(cartItem);
   }
@@ -70,7 +70,7 @@ export class CartService {
   async remove(id: number): Promise<void> {
     const result = await this.cartRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha savatcha topilmadi`);
+      throw new NotFoundException(`Cart not found by ID : ${id}`);
     }
   }
 }
