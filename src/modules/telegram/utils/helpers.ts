@@ -8,133 +8,133 @@ import { ORDER_STATUS } from '../../../common/constants';
 
 export function formatProductMessage(
   product: Product,
-  language: string = 'uz',
+  language: string = 'fa',
 ): string {
   if (product.stock === 0) {
-    return language === 'uz'
-      ? '❌ Bu mahsulot omborda mavjud emas.'
-      : '❌ Этот товар отсутствует на складе.';
+    return language === 'fa'
+      ? '❌ این محصول در انبار موجود نیست.'
+      : '❌ This product is out of stock.';
   }
-  const name = language === 'uz' ? product.name : product.nameRu;
+  const name = language === 'fa' ? product.name : product.nameRu;
   const description =
-    language === 'uz' ? product.description : product.descriptionRu;
+    language === 'fa' ? product.description : product.descriptionRu;
   return [
-    `<b>${name || (language === 'uz' ? 'Nomi kiritilmagan' : 'Название не указано')}</b>`,
-    `${description || (language === 'uz' ? 'Tavsif yo‘q' : 'Описание отсутствует')}`,
-    `💸 ${language === 'uz' ? 'Narxi' : 'Цена'}: ${product.price} so‘m`,
-    `📦 ${language === 'uz' ? 'Omborda' : 'На складе'}: ${product.stock} ${language === 'uz' ? 'dona' : 'шт.'}`,
+    `<b>${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}</b>`,
+    `${description || (language === 'fa' ? 'بدون توضیحات' : 'No description')}`,
+    `💸 ${language === 'fa' ? 'قیمت' : 'Price'}: ${product.price} تومان`,
+    `📦 ${language === 'fa' ? 'در انبار' : 'In stock'}: ${product.stock} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
   ].join('\n');
 }
 
 export function formatCategoryList(
   categories: Category[],
-  language: string = 'uz',
+  language: string = 'fa',
 ): string {
   if (!categories.length)
-    return language === 'uz'
-      ? '❌ Kategoriyalar mavjud emas.'
-      : '❌ Категории отсутствуют.';
+    return language === 'fa'
+      ? '❌ دسته‌بندی موجود نیست.'
+      : '❌ No categories available.';
   return categories
     .map((cat) => {
-      const name = language === 'uz' ? cat.name : cat.nameRu;
+      const name = language === 'fa' ? cat.name : cat.nameRu;
       const description =
-        language === 'uz' ? cat.description : cat.descriptionRu;
-      return `${language === 'uz' ? '📋 <b>ID</b>' : '📋 <b>ID</b>'}: ${cat.id}, <b>${language === 'uz' ? 'Nomi' : 'Название'}</b>: ${name || (language === 'uz' ? 'Nomi kiritilmagan' : 'Название не указано')}, <b>${language === 'uz' ? 'Tavsif' : 'Описание'}</b>: ${description || (language === 'uz' ? 'Tavsif yo‘q' : 'Описание отсутствует')}`;
+        language === 'fa' ? cat.description : cat.descriptionRu;
+      return `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${cat.id}, <b>${language === 'fa' ? 'نام' : 'Name'}</b>: ${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}, <b>${language === 'fa' ? 'توضیحات' : 'Description'}</b>: ${description || (language === 'fa' ? 'بدون توضیحات' : 'No description')}`;
     })
     .join('\n');
 }
 
 export function formatProductList(
   products: Product[],
-  language: string = 'uz',
+  language: string = 'fa',
 ): string {
   if (!products.length)
-    return language === 'uz'
-      ? '❌ Mahsulotlar mavjud emas.'
-      : '❌ Товары отсутствуют.';
+    return language === 'fa'
+      ? '❌ محصولی موجود نیست.'
+      : '❌ No products available.';
   const availableProducts = products.filter((prod) => prod.stock > 0);
   if (!availableProducts.length)
-    return language === 'uz'
-      ? '❌ Omborda mahsulotlar mavjud emas.'
-      : '❌ На складе нет товаров.';
+    return language === 'fa'
+      ? '❌ محصولی در انبار موجود نیست.'
+      : '❌ No products in stock.';
   return availableProducts
     .map((prod) => {
-      const name = language === 'uz' ? prod.name : prod.nameRu;
+      const name = language === 'fa' ? prod.name : prod.nameRu;
       const categoryName =
-        language === 'uz'
+        language === 'fa'
           ? prod.category?.name || 'N/A'
           : prod.category?.nameRu || 'N/A';
-      return `${language === 'uz' ? '📋 <b>ID</b>' : '📋 <b>ID</b>'}: ${prod.id}, <b>${language === 'uz' ? 'Nomi' : 'Название'}</b>: ${name || (language === 'uz' ? 'Nomi kiritilmagan' : 'Название не указано')}, 💸 <b>${language === 'uz' ? 'Narxi' : 'Цена'}</b>: ${prod.price} so‘m, 📌 <b>${language === 'uz' ? 'Kategoriya' : 'Категория'}</b>: ${categoryName}, 📦 <b>${language === 'uz' ? 'Omborda' : 'На складе'}</b>: ${prod.stock}`;
+      return `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${prod.id}, <b>${language === 'fa' ? 'نام' : 'Name'}</b>: ${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}, 💸 <b>${language === 'fa' ? 'قیمت' : 'Price'}</b>: ${prod.price} تومان, 📌 <b>${language === 'fa' ? 'دسته‌بندی' : 'Category'}</b>: ${categoryName}, 📦 <b>${language === 'fa' ? 'در انبار' : 'In stock'}</b>: ${prod.stock}`;
     })
     .join('\n');
 }
 
-export function formatUserList(users: User[], language: string = 'uz'): string {
+export function formatUserList(users: User[], language: string = 'fa'): string {
   if (!users.length)
-    return language === 'uz'
-      ? '❌ Foydalanuvchilar mavjud emas.'
-      : '❌ Пользователи отсутствуют.';
+    return language === 'fa'
+      ? '❌ کاربری موجود نیست.'
+      : '❌ No users available.';
   return users
     .map(
       (user) =>
-        `${language === 'uz' ? '👤 <b>ID</b>' : '👤 <b>ID</b>'}: ${user.id}, <b>${language === 'uz' ? 'Ism' : 'Имя'}</b>: ${user.fullName || (language === 'uz' ? 'Kiritilmagan' : 'Не указано')}, 📞 <b>${language === 'uz' ? 'Telefon' : 'Телефон'}</b>: ${user.phone || (language === 'uz' ? 'Kiritilmagan' : 'Не указано')}, 🆔 <b>Telegram ID</b>: ${user.telegramId}, <b>${language === 'uz' ? 'Admin' : 'Админ'}</b>: ${user.isAdmin ? (language === 'uz' ? '✅ Ha' : '✅ Да') : language === 'uz' ? '❌ Yo‘q' : '❌ Нет'}`,
+        `${language === 'fa' ? '👤 <b>شناسه</b>' : '👤 <b>ID</b>'}: ${user.id}, <b>${language === 'fa' ? 'نام' : 'Name'}</b>: ${user.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, 📞 <b>${language === 'fa' ? 'تلفن' : 'Phone'}</b>: ${user.phone || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, 🆔 <b>Telegram ID</b>: ${user.telegramId}, <b>${language === 'fa' ? 'مدیر' : 'Admin'}</b>: ${user.isAdmin ? (language === 'fa' ? '✅ بله' : '✅ Yes') : language === 'fa' ? '❌ خیر' : '❌ No'}`,
     )
     .join('\n');
 }
 
 export function formatFeedbackList(
   feedbacks: Feedback[],
-  language: string = 'uz',
+  language: string = 'fa',
 ): string {
   if (!feedbacks.length)
-    return language === 'uz'
-      ? '❌ Feedbacklar mavjud emas.'
-      : '❌ Отзывы отсутствуют.';
+    return language === 'fa'
+      ? '❌ بازخوردی موجود نیست.'
+      : '❌ No feedback available.';
   return feedbacks
     .map(
       (fb) =>
-        `${language === 'uz' ? '📋 <b>ID</b>' : '📋 <b>ID</b>'}: ${fb.id}, 📦 <b>${language === 'uz' ? 'Mahsulot' : 'Товар'}</b>: ${language === 'uz' ? fb.product.name : fb.product.nameRu || fb.product.name}, 👤 <b>${language === 'uz' ? 'Foydalanuvchi' : 'Пользователь'}</b>: ${fb.user?.fullName || (language === 'uz' ? 'Kiritilmagan' : 'Не указано')}, ⭐ <b>${language === 'uz' ? 'Reyting' : 'Рейтинг'}</b>: ${fb.rating}, 💬 <b>${language === 'uz' ? 'Izoh' : 'Комментарий'}</b>: ${fb.comment}`,
+        `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${fb.id}, 📦 <b>${language === 'fa' ? 'محصول' : 'Product'}</b>: ${language === 'fa' ? fb.product.name : fb.product.nameRu || fb.product.name}, 👤 <b>${language === 'fa' ? 'کاربر' : 'User'}</b>: ${fb.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, ⭐ <b>${language === 'fa' ? 'امتیاز' : 'Rating'}</b>: ${fb.rating}, 💬 <b>${language === 'fa' ? 'نظر' : 'Comment'}</b>: ${fb.comment}`,
     )
     .join('\n');
 }
 
 export function formatOrderList(
   orders: Order[],
-  language: string = 'uz',
+  language: string = 'fa',
 ): string {
   if (!orders.length)
-    return language === 'uz'
-      ? '❌ Buyurtmalar mavjud emas.'
-      : '❌ Заказы отсутствуют.';
+    return language === 'fa'
+      ? '❌ سفارشی موجود نیست.'
+      : '❌ No orders available.';
   return orders
     .map((order) => {
       const items = order.orderItems
         ?.map(
           (item) =>
-            `${language === 'uz' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'uz' ? 'dona' : 'шт.'}`,
+            `${language === 'fa' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
         )
         .join(', ');
       const delivery =
         order.deliveries && order.deliveries.length > 0
           ? [
-              `${language === 'uz' ? '📍 Manzil' : '📍 Адрес'}: (${order.deliveries[0].latitude}, ${order.deliveries[0].longitude})`,
-              `${language === 'uz' ? '🏠 Qo‘shimcha' : '🏠 Дополнительно'}: ${order.deliveries[0].addressDetails || 'N/A'}`,
-              `${language === 'uz' ? '📊 Yetkazib berish statusi' : '📊 Статус доставки'}: ${order.deliveries[0].status || 'N/A'}`,
-              `${language === 'uz' ? '🚚 Yetkazib beruvchi' : '🚚 Курьер'}: ${order.deliveries[0].courierName || 'N/A'}`,
-              `${language === 'uz' ? '📞 Telefon' : '📞 Телефон'}: ${order.deliveries[0].courierPhone || 'N/A'}`,
-              `${language === 'uz' ? '📅 Yetkazib berish sanasi' : '📅 Дата доставки'}: ${order.deliveries[0].deliveryDate?.toLocaleString(language === 'uz' ? 'uz-UZ' : 'ru-RU') || 'N/A'}`,
+              `${language === 'fa' ? '📍 آدرس' : '📍 Address'}: (${order.deliveries[0].latitude}, ${order.deliveries[0].longitude})`,
+              `${language === 'fa' ? '🏠 جزئیات' : '🏠 Details'}: ${order.deliveries[0].addressDetails || 'N/A'}`,
+              `${language === 'fa' ? '📊 وضعیت تحویل' : '📊 Delivery status'}: ${order.deliveries[0].status || 'N/A'}`,
+              `${language === 'fa' ? '🚚 پیک' : '🚚 Courier'}: ${order.deliveries[0].courierName || 'N/A'}`,
+              `${language === 'fa' ? '📞 تلفن' : '📞 Phone'}: ${order.deliveries[0].courierPhone || 'N/A'}`,
+              `${language === 'fa' ? '📅 تاریخ تحویل' : '📅 Delivery date'}: ${order.deliveries[0].deliveryDate?.toLocaleString(language === 'fa' ? 'fa-IR' : 'en-US') || 'N/A'}`,
             ].join('\n')
-          : language === 'uz'
-            ? '❌ Yetkazib berish ma‘lumotlari yo‘q'
-            : '❌ Данные о доставке отсутствуют';
+          : language === 'fa'
+            ? '❌ اطلاعات تحویل موجود نیست'
+            : '❌ No delivery data available';
 
       return [
-        `${language === 'uz' ? '📋 Buyurtma' : '📋 Заказ'} #${order.id}`,
-        `${language === 'uz' ? '👤 Foydalanuvchi' : '👤 Пользователь'}: ${order.user?.fullName || (language === 'uz' ? 'Kiritilmagan' : 'Не указано')}`,
-        `${language === 'uz' ? '💸 Jami' : '💸 Итого'}: ${order.totalAmount} so‘m`,
-        `${language === 'uz' ? '📊 Status' : '📊 Статус'}: ${order.status}`,
-        `${language === 'uz' ? '💵 To‘lov turi' : '💵 Тип оплаты'}: ${order.paymentType || (language === 'uz' ? 'To‘lanmagan' : 'Не оплачен')}`,
-        `${language === 'uz' ? '📦 Mahsulotlar' : '📦 Товары'}: ${items || 'N/A'}`,
+        `${language === 'fa' ? '📋 سفارش' : '📋 Order'} #${order.id}`,
+        `${language === 'fa' ? '👤 کاربر' : '👤 User'}: ${order.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}`,
+        `${language === 'fa' ? '💸 جمع کل' : '💸 Total'}: ${order.totalAmount} تومان`,
+        `${language === 'fa' ? '📊 وضعیت' : '📊 Status'}: ${order.status}`,
+        `${language === 'fa' ? '💵 نوع پرداخت' : '💵 Payment type'}: ${order.paymentType || (language === 'fa' ? 'پرداخت نشده' : 'Not paid')}`,
+        `${language === 'fa' ? '📦 محصولات' : '📦 Products'}: ${items || 'N/A'}`,
         delivery,
         `━━━━━━━━━━━━━━━`,
       ].join('\n');
@@ -144,58 +144,60 @@ export function formatOrderList(
 
 export function formatDeliveryList(
   deliveries: Delivery[],
-  language: string = 'uz',
+  language: string = 'fa',
 ): string {
   if (!deliveries.length)
-    return language === 'uz'
-      ? '❌ Yetkazib berishlar mavjud emas.'
-      : '❌ Доставки отсутствуют.';
+    return language === 'fa'
+      ? '❌ تحویلی موجود نیست.'
+      : '❌ No deliveries available.';
   return deliveries
     .map((delivery) => {
       return [
-        `${language === 'uz' ? '📋 <b>Yetkazib berish</b>' : '📋 <b>Доставка</b>'} #${delivery.id}`,
-        `${language === 'uz' ? '📋 <b>Buyurtma ID</b>' : '📋 <b>ID заказа</b>'}: ${delivery.order.id}`,
-        `${language === 'uz' ? '👤 <b>Foydalanuvchi</b>' : '👤 <b>Пользователь</b>'}: ${delivery.order.user?.fullName || (language === 'uz' ? 'Kiritilmagan' : 'Не указано')}`,
-        `${language === 'uz' ? '📍 <b>Manzil</b>' : '📍 <b>Адрес</b>'}: (${delivery.latitude}, ${delivery.longitude})`,
-        `${language === 'uz' ? '🏠 <b>Qo‘shimcha</b>' : '🏠 <b>Дополнительно</b>'}: ${delivery.addressDetails || 'N/A'}`,
-        `${language === 'uz' ? '📊 <b>Status</b>' : '📊 <b>Статус</b>'}: ${delivery.status}`,
-        `${language === 'uz' ? '🚚 <b>Yetkazib beruvchi</b>' : '🚚 <b>Курьер</b>'}: ${delivery.courierName || 'N/A'}`,
-        `${language === 'uz' ? '📞 <b>Telefon</b>' : '📞 <b>Телефон</b>'}: ${delivery.courierPhone || 'N/A'}`,
-        `${language === 'uz' ? '📅 <b>Yetkazib berish sanasi</b>' : '📅 <b>Дата доставки</b>'}: ${delivery.deliveryDate?.toLocaleString(language === 'uz' ? 'uz-UZ' : 'ru-RU') || 'N/A'}`,
-        `${language === 'uz' ? '🔍 <b>Kuzatuv raqami</b>' : '🔍 <b>Номер отслеживания</b>'}: ${delivery.trackingNumber || 'N/A'}`,
+        `${language === 'fa' ? '📋 <b>تحویل</b>' : '📋 <b>Delivery</b>'} #${delivery.id}`,
+        `${language === 'fa' ? '📋 <b>شناسه سفارش</b>' : '📋 <b>Order ID</b>'}: ${delivery.order.id}`,
+        `${language === 'fa' ? '👤 <b>کاربر</b>' : '👤 <b>User</b>'}: ${delivery.order.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}`,
+        `${language === 'fa' ? '📍 <b>آدرس</b>' : '📍 <b>Address</b>'}: (${delivery.latitude}, ${delivery.longitude})`,
+        `${language === 'fa' ? '🏠 <b>جزئیات</b>' : '🏠 <b>Details</b>'}: ${delivery.addressDetails || 'N/A'}`,
+        `${language === 'fa' ? '📊 <b>وضعیت</b>' : '📊 <b>Status</b>'}: ${delivery.status}`,
+        `${language === 'fa' ? '🚚 <b>پیک</b>' : '🚚 <b>Courier</b>'}: ${delivery.courierName || 'N/A'}`,
+        `${language === 'fa' ? '📞 <b>تلفن</b>' : '📞 <b>Phone</b>'}: ${delivery.courierPhone || 'N/A'}`,
+        `${language === 'fa' ? '📅 <b>تاریخ تحویل</b>' : '📅 <b>Delivery date</b>'}: ${delivery.deliveryDate?.toLocaleString(language === 'fa' ? 'fa-IR' : 'en-US') || 'N/A'}`,
+        `${language === 'fa' ? '🔍 <b>شماره پیگیری</b>' : '🔍 <b>Tracking number</b>'}: ${delivery.trackingNumber || 'N/A'}`,
         `━━━━━━━━━━━━━━━`,
       ].join('\n');
     })
     .join('\n');
 }
 
-export function formatStats(stats: any, language: string = 'uz'): string {
+export function formatStats(stats: any, language: string = 'fa'): string {
   const monthlyStats =
     Object.entries(stats.monthlyStats || {})
-      .map(([month, amount]) => `📆 ${month}: ${amount} so‘m`)
-      .join('\n') || (language === 'uz' ? 'Ma’lumot yo‘q' : 'Нет данных');
+      .map(([month, amount]) => `📆 ${month}: ${amount} تومان`)
+      .join('\n') ||
+    (language === 'fa' ? 'اطلاعاتی موجود نیست' : 'No data available');
   const yearlyStats =
     Object.entries(stats.yearlyStats || {})
-      .map(([year, amount]) => `📆 ${year}: ${amount} so‘m`)
-      .join('\n') || (language === 'uz' ? 'Ma’lumot yo‘q' : 'Нет данных');
+      .map(([year, amount]) => `📆 ${year}: ${amount} تومان`)
+      .join('\n') ||
+    (language === 'fa' ? 'اطلاعاتی موجود نیست' : 'No data available');
 
   return [
-    `${language === 'uz' ? '📊 <b>Statistika</b>' : '📊 <b>Статистика</b>'}`,
+    `${language === 'fa' ? '📊 <b>آمار</b>' : '📊 <b>Statistics</b>'}`,
     `━━━━━━━━━━━━━━━`,
-    `${language === 'uz' ? '📋 <b>Jami buyurtmalar</b>' : '📋 <b>Всего заказов</b>'}: ${stats.totalOrders}`,
-    `${language === 'uz' ? '💸 <b>Jami summa (to‘langan)</b>' : '💸 <b>Общая сумма (оплачено)</b>'}: ${stats.totalAmount} so‘m`,
-    `${language === 'uz' ? '⏳ <b>Kutayotgan buyurtmalar</b>' : '⏳ <b>Ожидающие заказы</b>'}: ${stats.pendingOrders}`,
-    `${language === 'uz' ? '✅ <b>To‘langan buyurtmalar</b>' : '✅ <b>Оплаченные заказы</b>'}: ${stats.paidOrders}`,
-    `${language === 'uz' ? '🚚 <b>Yetkazib berilayotgan</b>' : '🚚 <b>В доставке</b>'}: ${stats.shippedOrders}`,
-    `${language === 'uz' ? '✔️ <b>Yetkazib berilgan</b>' : '✔️ <b>Доставленные</b>'}: ${stats.deliveredOrders}`,
-    `${language === 'uz' ? '❌ <b>Bekor qilingan</b>' : '❌ <b>Отмененные</b>'}: ${stats.cancelledOrders}`,
-    `${language === 'uz' ? '📦 <b>Sotilgan mahsulotlar</b>' : '📦 <b>Проданные товары</b>'}: ${stats.soldProducts}`,
-    `${language === 'uz' ? '🛒 <b>Savatchadagi mahsulotlar</b>' : '🛒 <b>Товары в корзине</b>'}: ${stats.cartItems}`,
+    `${language === 'fa' ? '📋 <b>کل سفارشات</b>' : '📋 <b>Total orders</b>'}: ${stats.totalOrders}`,
+    `${language === 'fa' ? '💸 <b>مجموع مبلغ (پرداخت شده)</b>' : '💸 <b>Total amount (paid)</b>'}: ${stats.totalAmount} تومان`,
+    `${language === 'fa' ? '⏳ <b>سفارشات در انتظار</b>' : '⏳ <b>Pending orders</b>'}: ${stats.pendingOrders}`,
+    `${language === 'fa' ? '✅ <b>سفارشات پرداخت شده</b>' : '✅ <b>Paid orders</b>'}: ${stats.paidOrders}`,
+    `${language === 'fa' ? '🚚 <b>در حال ارسال</b>' : '🚚 <b>In delivery</b>'}: ${stats.shippedOrders}`,
+    `${language === 'fa' ? '✔️ <b>تحویل داده شده</b>' : '✔️ <b>Delivered</b>'}: ${stats.deliveredOrders}`,
+    `${language === 'fa' ? '❌ <b>لغو شده</b>' : '❌ <b>Cancelled</b>'}: ${stats.cancelledOrders}`,
+    `${language === 'fa' ? '📦 <b>محصولات فروخته شده</b>' : '📦 <b>Sold products</b>'}: ${stats.soldProducts}`,
+    `${language === 'fa' ? '🛒 <b>محصولات در سبد خرید</b>' : '🛒 <b>Cart items</b>'}: ${stats.cartItems}`,
     `━━━━━━━━━━━━━━━`,
-    `${language === 'uz' ? '📅 <b>Oylik hisobot (to‘langan)</b>' : '📅 <b>Месячный отчет (оплачено)</b>'}:`,
+    `${language === 'fa' ? '📅 <b>گزارش ماهانه (پرداخت شده)</b>' : '📅 <b>Monthly report (paid)</b>'}:`,
     monthlyStats,
     `━━━━━━━━━━━━━━━`,
-    `${language === 'uz' ? '📅 <b>Yillik hisobot (to‘langan)</b>' : '📅 <b>Годовой отчет (оплачено)</b>'}:`,
+    `${language === 'fa' ? '📅 <b>گزارش سالانه (پرداخت شده)</b>' : '📅 <b>Yearly report (paid)</b>'}:`,
     yearlyStats,
     `━━━━━━━━━━━━━━━`,
   ].join('\n');

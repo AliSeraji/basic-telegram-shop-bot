@@ -100,10 +100,10 @@ export class OrderService {
     const admins = await this.userService.findAllAdmins(); // isAdmin=true bo‘lganlar
 
     for (const admin of admins) {
-      const adminLang = admin.language || 'uz';
+      const adminLang = admin.language || 'fa';
       const items = order.orderItems
         ?.map((item) =>
-          adminLang === 'uz'
+          adminLang === 'fa'
             ? `${item.product.name} - ${item.quantity} dona`
             : `${item.product.nameJP || item.product.name} - ${item.quantity} шт.`,
         )

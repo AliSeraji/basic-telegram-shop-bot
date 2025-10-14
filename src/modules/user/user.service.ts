@@ -69,9 +69,9 @@ export class UserService {
   }
 
   async updateLanguage(telegramId: string, language: string): Promise<User> {
-    if (!['uz', 'ru'].includes(language)) {
+    if (!['fa', 'Eng'].includes(language)) {
       throw new Error(
-        'Wrong language selected. Only "uz" or "ru" are allowed.',
+        'Wrong language selected. Only "Fa" or "Eng" are allowed.',
       );
     }
     const user = await this.findByTelegramId(telegramId);
