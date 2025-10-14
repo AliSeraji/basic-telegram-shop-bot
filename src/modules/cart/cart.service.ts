@@ -20,13 +20,14 @@ export class CartService {
     const user = await this.userService.findByTelegramId(dto.telegramId);
     const product = await this.productService.findOne(dto.productId);
     if (!user || !product) throw new Error('User or product not found');
-    if (product.stock < dto.quantity) throw new Error('Not enough product in stock');
+    if (product.stock < dto.quantity)
+      throw new Error('Not enough product in stock');
 
     const cartItem = await this.cartRepository.findOne({
       where: { user: { id: user.id }, product: { id: product.id } },
       relations: ['product', 'user'],
     });
- 
+
     if (cartItem) {
       cartItem.quantity += dto.quantity;
       return this.cartRepository.save(cartItem);

@@ -14,7 +14,9 @@ export class UserService {
 
   async registerUser(dto: CreateUserDto): Promise<User> {
     try {
-      let user = await this.userRepository.findOneBy({ telegramId: dto.telegramId });
+      let user = await this.userRepository.findOneBy({
+        telegramId: dto.telegramId,
+      });
       if (!user) {
         user = this.userRepository.create({
           telegramId: dto.telegramId,
@@ -49,7 +51,9 @@ export class UserService {
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({ relations: ['orders', 'cartItems', 'feedbacks'] });
+    return this.userRepository.find({
+      relations: ['orders', 'cartItems', 'feedbacks'],
+    });
   }
 
   async update(id: number, dto: UpdateUserDto): Promise<User> {
@@ -66,7 +70,9 @@ export class UserService {
 
   async updateLanguage(telegramId: string, language: string): Promise<User> {
     if (!['uz', 'ru'].includes(language)) {
-      throw new Error('Wrong language selected. Only "uz" or "ru" are allowed.');
+      throw new Error(
+        'Wrong language selected. Only "uz" or "ru" are allowed.',
+      );
     }
     const user = await this.findByTelegramId(telegramId);
     user.language = language;
@@ -81,10 +87,9 @@ export class UserService {
   }
 
   async findAllAdmins(): Promise<User[]> {
-  return this.userRepository.find({
-    where: { isAdmin: true },
-    relations: ['orders', 'cartItems', 'feedbacks'],
-  });
-}
-
+    return this.userRepository.find({
+      where: { isAdmin: true },
+      relations: ['orders', 'cartItems', 'feedbacks'],
+    });
+  }
 }

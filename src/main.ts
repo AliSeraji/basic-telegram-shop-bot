@@ -15,11 +15,13 @@ async function bootstrap() {
     app.enableCors();
     app.getHttpAdapter().get('/health', (req, res) => {
       logger.log('Health check endpoint called');
-      res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+      res
+        .status(200)
+        .json({ status: 'ok', timestamp: new Date().toISOString() });
     });
-    
-  app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalFilters(new AllExceptionsFilter());
+
+    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalFilters(new AllExceptionsFilter());
     const port = 3000;
     await app.listen(port);
     logger.log(`Application is running on port ${port}`);

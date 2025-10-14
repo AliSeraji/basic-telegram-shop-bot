@@ -10,7 +10,9 @@ export class Feedback {
   @ManyToOne(() => User, (user) => user.feedbacks, { onDelete: 'CASCADE' })
   user: User;
 
-  @ManyToOne(() => Product, (product) => product.feedbacks, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.feedbacks, {
+    onDelete: 'CASCADE',
+  })
   product: Product;
 
   @Column()

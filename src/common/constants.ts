@@ -8,7 +8,6 @@ export const ORDER_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
-
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
   COMPLETED: 'completed',

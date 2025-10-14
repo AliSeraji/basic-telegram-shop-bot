@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { OrderItem } from './order-item.entity';
 import { Payment } from '../payment/payment.entity';
@@ -17,10 +23,10 @@ export class Order {
   totalAmount: number;
 
   @Column({ type: 'enum', enum: ORDER_STATUS })
-  status: typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
+  status: (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
 
   @Column({ type: 'enum', enum: PAYMENT_TYPE, nullable: true })
-  paymentType: typeof PAYMENT_TYPE[keyof typeof PAYMENT_TYPE] | null;
+  paymentType: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE] | null;
 
   @Column()
   createdAt: Date;

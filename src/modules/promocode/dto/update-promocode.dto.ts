@@ -1,4 +1,10 @@
-import { IsString, IsNumber, IsDateString, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsDateString,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
 export class UpdatePromocodeDto {
   @IsString()

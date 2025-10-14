@@ -16,42 +16,45 @@ export class PaymentService {
     private orderService: OrderService,
   ) {}
 
-  async generatePaymentLink(orderId: number, paymentType: string): Promise<string> {
-  const order = await this.orderService.findOne(orderId);
-  if (!order) {
-    throw new NotFoundException(`ID ${orderId} bo'yicha buyurtma topilmadi`);
+  async generatePaymentLink(
+    orderId: number,
+    paymentType: string,
+  ): Promise<string> {
+    const order = await this.orderService.findOne(orderId);
+    if (!order) {
+      throw new NotFoundException(`No order found for ID ${orderId}`);
+    }
+
+    const normalizedType = (paymentType || '').toString().trim().toLowerCase();
+
+    let normalizedPaymentType: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
+
+    if (normalizedType === PAYMENT_TYPE.CLICK) {
+      normalizedPaymentType = PAYMENT_TYPE.CLICK;
+    } else if (normalizedType === PAYMENT_TYPE.CARD) {
+      normalizedPaymentType = PAYMENT_TYPE.CARD;
+    } else {
+      throw new Error('❌ Incorrect payment type');
+    }
+
+    // Test qilish uchun oddiy link
+    const testUrl = `https://example.com/pay/${normalizedPaymentType}/${order.id}`;
+
+    const payment = this.paymentRepository.create({
+      order,
+      paymentType: normalizedPaymentType,
+      amount: order.totalAmount,
+      status: 'Pending',
+      createdAt: new Date(),
+    });
+
+    await this.paymentRepository.save(payment);
+    await this.orderService.update(order.id, {
+      paymentType: normalizedPaymentType,
+    });
+
+    return testUrl;
   }
-
-  const normalizedType = (paymentType || '').toString().trim().toLowerCase();
-
-  let normalizedPaymentType: typeof PAYMENT_TYPE[keyof typeof PAYMENT_TYPE];
-
-  if (normalizedType === PAYMENT_TYPE.CLICK) {
-    normalizedPaymentType = PAYMENT_TYPE.CLICK;
-  } else if (normalizedType === PAYMENT_TYPE.PAYME) {
-    normalizedPaymentType = PAYMENT_TYPE.PAYME;
-  } else {
-    throw new Error('❌ Noto‘g‘ri to‘lov turi');
-  }
-
-  // Test qilish uchun oddiy link
-  const testUrl = `https://example.com/pay/${normalizedPaymentType}/${order.id}`;
-
-  const payment = this.paymentRepository.create({
-    order,
-    paymentType: normalizedPaymentType,
-    amount: order.totalAmount,
-    status: 'Pending',
-    createdAt: new Date(),
-  });
-
-  await this.paymentRepository.save(payment);
-  await this.orderService.update(order.id, { paymentType: normalizedPaymentType });
-
-  return testUrl;
-}
-
-
 
   // async generatePaymentLink(orderId: number, paymentType: string): Promise<string> {
   //   const order = await this.orderService.findOne(orderId);
@@ -61,7 +64,7 @@ export class PaymentService {
 
   //   let paymentUrl: string;
   //   let normalizedPaymentType: typeof PAYMENT_TYPE[keyof typeof PAYMENT_TYPE];
-    
+
   //   if (paymentType.toLowerCase() === 'click') {
   //     normalizedPaymentType = PAYMENT_TYPE.CLICK;
   //     const response = await axios.post('https://api.click.uz/v2/merchant/invoice/create', {
@@ -100,24 +103,40 @@ export class PaymentService {
   async handlePaymentCallback(paymentType: string, data: any): Promise<void> {
     let payment;
     if (paymentType.toLowerCase() === 'click') {
-      payment = await this.paymentRepository.findOne({ where: { order: { id: data.order_id } }, relations: ['order'] });
+      payment = await this.paymentRepository.findOne({
+        where: { order: { id: data.order_id } },
+        relations: ['order'],
+      });
       if (!payment) {
-        throw new NotFoundException(`Order ${data.order_id} uchun to'lov topilmadi`);
+        throw new NotFoundException(
+          `Order ${data.order_id} uchun to'lov topilmadi`,
+        );
       }
       if (data.status === 'success') {
-        await this.paymentRepository.update(payment.id, { status: 'Success', transactionId: data.transaction_id });
+        await this.paymentRepository.update(payment.id, {
+          status: 'Success',
+          transactionId: data.transaction_id,
+        });
         await this.orderService.updateStatus(data.order_id, 'paid'); // 'Paid' → 'paid'
         this.logger.log(`Click to‘lovi muvaffaqiyatli: Order ${data.order_id}`);
       } else {
         await this.paymentRepository.update(payment.id, { status: 'Failed' });
       }
     } else if (paymentType.toLowerCase() === 'payme') {
-      payment = await this.paymentRepository.findOne({ where: { order: { id: data.order_id } }, relations: ['order'] });
+      payment = await this.paymentRepository.findOne({
+        where: { order: { id: data.order_id } },
+        relations: ['order'],
+      });
       if (!payment) {
-        throw new NotFoundException(`Order ${data.order_id} uchun to'lov topilmadi`);
+        throw new NotFoundException(
+          `Order ${data.order_id} uchun to'lov topilmadi`,
+        );
       }
       if (data.state === 1) {
-        await this.paymentRepository.update(payment.id, { status: 'Success', transactionId: data.transaction_id });
+        await this.paymentRepository.update(payment.id, {
+          status: 'Success',
+          transactionId: data.transaction_id,
+        });
         await this.orderService.updateStatus(data.order_id, 'paid');
         this.logger.log(`Payme to‘lovi muvaffaqiyatli: Order ${data.order_id}`);
       } else {

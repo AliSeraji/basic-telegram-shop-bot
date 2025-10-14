@@ -11,7 +11,7 @@ export class Payment {
   order: Order;
 
   @Column({ type: 'enum', enum: PAYMENT_TYPE })
-  paymentType: typeof PAYMENT_TYPE[keyof typeof PAYMENT_TYPE];
+  paymentType: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
 
   @Column()
   amount: number;
@@ -21,6 +21,9 @@ export class Payment {
 
   @Column({ nullable: true })
   transactionId: string;
+
+  @Column({ type: 'bytea', nullable: true }) // PostgreSQL
+  receiptImage: Buffer;
 
   @Column()
   createdAt: Date;

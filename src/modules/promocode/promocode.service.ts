@@ -20,12 +20,14 @@ export class PromocodeService {
   }
 
   async applyPromocode(code: string): Promise<Promocode> {
-    const promocode = await this.promocodeRepository.findOne({ where: { code, isActive: true } });
+    const promocode = await this.promocodeRepository.findOne({
+      where: { code, isActive: true },
+    });
     if (!promocode) {
-      throw new NotFoundException(`Kod ${code} bo'yicha promokod topilmadi`);
+      throw new NotFoundException(`Promocode not found with code ${code}`);
     }
     if (promocode.validTill < new Date()) {
-      throw new NotFoundException(`Promokod ${code} muddati tugagan`);
+      throw new NotFoundException(`Promocode ${code} has expired`);
     }
     return promocode;
   }
@@ -37,7 +39,7 @@ export class PromocodeService {
   async findOne(id: number): Promise<Promocode> {
     const promocode = await this.promocodeRepository.findOneBy({ id });
     if (!promocode) {
-      throw new NotFoundException(`ID ${id} bo'yicha promokod topilmadi`);
+      throw new NotFoundException(`Promocode not found with ID ${id}`);
     }
     return promocode;
   }
@@ -45,7 +47,7 @@ export class PromocodeService {
   async update(id: number, dto: UpdatePromocodeDto): Promise<Promocode> {
     const result = await this.promocodeRepository.update(id, dto);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha promokod topilmadi`);
+      throw new NotFoundException(`Promocode not found with ID ${id}`);
     }
     return this.findOne(id);
   }
@@ -53,7 +55,7 @@ export class PromocodeService {
   async remove(id: number): Promise<void> {
     const result = await this.promocodeRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha promokod topilmadi`);
+      throw new NotFoundException(`Promocode not found with ID ${id}`);
     }
   }
 }

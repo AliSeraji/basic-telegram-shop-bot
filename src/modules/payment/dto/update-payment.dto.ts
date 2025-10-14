@@ -5,5 +5,12 @@ export class UpdatePaymentDto {
   @IsString()
   @IsOptional()
   @IsEnum(PAYMENT_TYPE)
-  paymentType?: typeof PAYMENT_TYPE[keyof typeof PAYMENT_TYPE];
+  paymentType?: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
+
+  @IsOptional()
+  receiptImage?: Buffer;
+
+  @IsString()
+  @IsOptional()
+  receiptImageMimeType?: string;
 }

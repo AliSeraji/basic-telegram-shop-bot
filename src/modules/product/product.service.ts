@@ -16,9 +16,13 @@ export class ProductService {
   ) {}
 
   async create(dto: CreateProductDto): Promise<Product> {
-    const category = await this.categoryRepository.findOne({ where: { id: dto.categoryId } });
+    const category = await this.categoryRepository.findOne({
+      where: { id: dto.categoryId },
+    });
     if (!category) {
-      throw new NotFoundException(`Category ID ${dto.categoryId} topilmadi`);
+      throw new NotFoundException(
+        `Category with ID ${dto.categoryId} not found`,
+      );
     }
 
     const product = this.productRepository.create({
@@ -34,35 +38,38 @@ export class ProductService {
     try {
       return await this.productRepository.find({ relations: ['category'] });
     } catch (error) {
-      throw new Error('Mahsulotlarni olishda xato yuz berdi');
+      throw new Error('Error occurred while fetching products');
     }
   }
 
   async findOne(id: number): Promise<Product> {
-    const product = await this.productRepository.findOne({ where: { id }, relations: ['category'] });
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: ['category'],
+    });
     if (!product) {
-      throw new NotFoundException(`ID ${id} bo'yicha mahsulot topilmadi`);
+      throw new NotFoundException(`Product not found with ID ${id}`);
     }
     return product;
   }
 
   async findByCategory(categoryId: number): Promise<Product[]> {
-  const products = await this.productRepository.find({
-    where: { category: { id: categoryId } },
-    relations: ['category'],
-  });
+    const products = await this.productRepository.find({
+      where: { category: { id: categoryId } },
+      relations: ['category'],
+    });
 
-  products.forEach(prod => {
-    console.log(`Product: ${prod.name}, nameRu: ${prod.nameRu}`);
-  });
+    products.forEach((prod) => {
+      console.log(`Product: ${prod.name}, nameRu: ${prod.nameJP}`);
+    });
 
-  return products;
-}
+    return products;
+  }
 
   async update(id: number, dto: UpdateProductDto): Promise<Product> {
     const result = await this.productRepository.update(id, dto);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha mahsulot topilmadi`);
+      throw new NotFoundException(`Product not found with ID ${id}`);
     }
     return this.findOne(id);
   }
@@ -70,7 +77,7 @@ export class ProductService {
   async remove(id: number): Promise<void> {
     const result = await this.productRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`ID ${id} bo'yicha mahsulot topilmadi`);
+      throw new NotFoundException(`Product not found with ID ${id}`);
     }
   }
 }

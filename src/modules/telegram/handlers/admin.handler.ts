@@ -20,23 +20,26 @@ export class AdminHandler {
       const telegramId = msg.from.id.toString();
       try {
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
+        const language = user.language || 'fa';
         if (!user.isAdmin) {
-          const message = language === 'uz'
-            ? '❌ Bu amal faqat adminlar uchun mavjud.'
-            : '❌ Это действие доступно только администраторам.';
+          const message =
+            language === 'fa'
+              ? 'این عملیات فقط برای ادمین در دسترس است❌'
+              : '❌ This action is available only for administrators.';
           await this.telegramService.sendMessage(chatId, message, {});
           return;
         }
-        const message = language === 'uz'
-          ? '🛠 Admin paneliga xush kelibsiz!'
-          : '🛠 Добро пожаловать в админ-панель!';
+        const message =
+          language === 'fa'
+            ? 'به پنل مدیریت خوش آمدید 🛠'
+            : '🛠 Welcome to the admin panel!';
         await this.telegramService.sendMessage(chatId, message, {
           reply_markup: getAdminKeyboard(language),
         });
       } catch (error) {
         this.logger.error(`Error in admin: ${error.message}`);
-        const message = '❌ Admin paneliga kirishda xato yuz berdi.\n❌ Ошибка при входе в админ-панель.';
+        const message =
+          'خطا در ورود به پنل مدیریت❌\n❌ Error accessing the admin panel.';
         await this.telegramService.sendMessage(chatId, message, {});
       }
     });

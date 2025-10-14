@@ -11,4 +11,3 @@ export class CreatePromocodeDto {
   @IsDateString()
   validTill: Date;
 }
-

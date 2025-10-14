@@ -1,4 +1,9 @@
-import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Delivery } from './delivery.entity';
@@ -17,7 +22,8 @@ export class DeliveryService {
 
   async create(dto: CreateDeliveryDto): Promise<Delivery> {
     const order = await this.orderService.findOne(dto.orderId);
-    if (!order) throw new NotFoundException(`Order ID ${dto.orderId} was not found!`);
+    if (!order)
+      throw new NotFoundException(`Order ID ${dto.orderId} was not found!`);
 
     const delivery = this.deliveryRepository.create({
       order,
@@ -47,7 +53,8 @@ export class DeliveryService {
       where: { id },
       relations: ['order', 'order.user'],
     });
-    if (!delivery) throw new NotFoundException(`Delivery ID ${id} was not found!`);
+    if (!delivery)
+      throw new NotFoundException(`Delivery ID ${id} was not found!`);
     return delivery;
   }
 
@@ -56,7 +63,8 @@ export class DeliveryService {
       where: { order: { id: orderId } },
       relations: ['order', 'order.user'],
     });
-    if (!delivery) throw new NotFoundException(`Delivery not found for Order ID ${orderId}`);
+    if (!delivery)
+      throw new NotFoundException(`Delivery not found for Order ID ${orderId}`);
     return delivery;
   }
 

@@ -1,4 +1,10 @@
-import { forwardRef, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './order.entity';
@@ -57,7 +63,9 @@ export class OrderService {
         const product = await this.productService.findOne(item.product.id);
         if (!product) {
           this.logger.error(`Product ID ${item.product.id} not found`);
-          throw new NotFoundException(`Product ID ${item.product.id} not found`);
+          throw new NotFoundException(
+            `Product ID ${item.product.id} not found`,
+          );
         }
         if (product.stock < item.quantity) {
           this.logger.error(`Insufficient stock for product ${product.name}`);
@@ -65,7 +73,9 @@ export class OrderService {
         }
         totalAmount += item.product.price * item.quantity;
         product.stock -= item.quantity;
-        await this.productService.update(item.product.id, { stock: product.stock });
+        await this.productService.update(item.product.id, {
+          stock: product.stock,
+        });
         return this.orderItemRepository.create({
           order: savedOrder,
           product: item.product,
@@ -87,36 +97,40 @@ export class OrderService {
   }
 
   async notifyAdminOrderCreated(order: Order, user: any) {
-  const admins = await this.userService.findAllAdmins(); // isAdmin=true bo‘lganlar
+    const admins = await this.userService.findAllAdmins(); // isAdmin=true bo‘lganlar
 
-  for (const admin of admins) {
-    const adminLang = admin.language || 'uz';
-    const items = order.orderItems?.map((item) =>
-      adminLang === 'uz'
-        ? `${item.product.name} - ${item.quantity} dona`
-        : `${item.product.nameJP || item.product.name} - ${item.quantity} шт.`
-    ).join(', ');
+    for (const admin of admins) {
+      const adminLang = admin.language || 'uz';
+      const items = order.orderItems
+        ?.map((item) =>
+          adminLang === 'uz'
+            ? `${item.product.name} - ${item.quantity} dona`
+            : `${item.product.nameJP || item.product.name} - ${item.quantity} шт.`,
+        )
+        .join(', ');
 
-    const message = adminLang === 'fa'
-      ? `🔔 <b>سفارش جدیدی ایجاد شده</b>\n` +
-        `📋 <b>شماره سفارش:</b> ${order.id}\n` +
-        `👤 <b>کاربر:</b> ${user.fullName || 'نام کاربر وارد نشده'}\n` +
-        `📦 <b>محصولات:</b> ${items || 'هیچ محصولی وارد نشده'}\n` +
-        `💸 <b>جمع سفارش:</b> ${order.totalAmount} ریال\n` +
-        `📊 <b>وضعیت:</b> ${order.status}\n` +
-        `━━━━━━━━━━━━━━━`
-      : `🔔 <b>A new order has been created!</b>\n` +
-        `📋 <b>ID:</b> ${order.id}\n` +
-        `👤 <b>User:</b> ${user.fullName || 'Not specified'}\n` +
-        `📦 <b>Products:</b> ${items || 'N/A'}\n` +
-        `💸 <b>Total:</b> ${order.totalAmount} Rial\n` +
-        `📊 <b>Status:</b> ${order.status}\n` +
-        `━━━━━━━━━━━━━━━`;
+      const message =
+        adminLang === 'fa'
+          ? `🔔 <b>سفارش جدیدی ایجاد شده</b>\n` +
+            `📋 <b>شماره سفارش:</b> ${order.id}\n` +
+            `👤 <b>کاربر:</b> ${user.fullName || 'نام کاربر وارد نشده'}\n` +
+            `📦 <b>محصولات:</b> ${items || 'هیچ محصولی وارد نشده'}\n` +
+            `💸 <b>جمع سفارش:</b> ${order.totalAmount} ریال\n` +
+            `📊 <b>وضعیت:</b> ${order.status}\n` +
+            `━━━━━━━━━━━━━━━`
+          : `🔔 <b>A new order has been created!</b>\n` +
+            `📋 <b>ID:</b> ${order.id}\n` +
+            `👤 <b>User:</b> ${user.fullName || 'Not specified'}\n` +
+            `📦 <b>Products:</b> ${items || 'N/A'}\n` +
+            `💸 <b>Total:</b> ${order.totalAmount} Rial\n` +
+            `📊 <b>Status:</b> ${order.status}\n` +
+            `━━━━━━━━━━━━━━━`;
 
-    await this.telegramService.sendMessage(admin.telegramId, message, { parse_mode: 'HTML' });
+      await this.telegramService.sendMessage(admin.telegramId, message, {
+        parse_mode: 'HTML',
+      });
+    }
   }
-}
-
 
   async findAll(page: number = 1, limit: number = 10): Promise<Order[]> {
     this.logger.log(`Fetching orders, page: ${page}, limit: ${limit}`);
@@ -145,8 +159,14 @@ export class OrderService {
     return order;
   }
 
-  async getUserOrders(telegramId: string, page: number = 1, limit: number = 10): Promise<Order[]> {
-    this.logger.log(`Fetching orders for telegramId: ${telegramId}, page: ${page}, limit: ${limit}`);
+  async getUserOrders(
+    telegramId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<Order[]> {
+    this.logger.log(
+      `Fetching orders for telegramId: ${telegramId}, page: ${page}, limit: ${limit}`,
+    );
     const user = await this.userService.findByTelegramId(telegramId);
     if (!user) {
       this.logger.error(`User not found for telegramId: ${telegramId}`);
@@ -162,22 +182,27 @@ export class OrderService {
     return orders;
   }
 
-  async updateStatus(id: number, status: typeof ORDER_STATUS[keyof typeof ORDER_STATUS]): Promise<Order> {
-  const order = await this.findOne(id);
-  order.status = status;
-  order.updatedAt = new Date();
-  await this.orderRepository.save(order);
-  const language = order.user.language || 'fa';
+  async updateStatus(
+    id: number,
+    status: (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS],
+  ): Promise<Order> {
+    const order = await this.findOne(id);
+    order.status = status;
+    order.updatedAt = new Date();
+    await this.orderRepository.save(order);
+    const language = order.user.language || 'fa';
 
-  const message = language === 'fa'
-    ? `${status}: به روز رسانی شد ${id}# وضعیت سفارش📋`
-    : `📋 Order status #${id} has been updated: ${status}`;
+    const message =
+      language === 'fa'
+        ? `${status}: به روز رسانی شد ${id}# وضعیت سفارش📋`
+        : `📋 Order status #${id} has been updated: ${status}`;
 
-  await this.telegramService.sendMessage(order.user.telegramId, message, { parse_mode: 'HTML' });
+    await this.telegramService.sendMessage(order.user.telegramId, message, {
+      parse_mode: 'HTML',
+    });
 
-  return order;
-}
-
+    return order;
+  }
 
   async update(id: number, dto: UpdateOrderDto): Promise<Order> {
     const order = await this.findOne(id);
@@ -200,7 +225,9 @@ export class OrderService {
     cartItems: number;
   }> {
     this.logger.log('Fetching order stats');
-    const orders = await this.orderRepository.find({ relations: ['orderItems', 'orderItems.product'] });
+    const orders = await this.orderRepository.find({
+      relations: ['orderItems', 'orderItems.product'],
+    });
     const cartItems = await this.cartService.getAllCartItems();
 
     const monthlyStats = {};
@@ -215,17 +242,21 @@ export class OrderService {
     let soldProducts = 0;
     let totalAmount = 0;
 
-    const paidStatuses = [ORDER_STATUS.PAYMENT_VALIDATED, ORDER_STATUS.SHIPPED, ORDER_STATUS.DELIVERED] as const;
+    const paidStatuses = [
+      ORDER_STATUS.PAYMENT_VALIDATED,
+      ORDER_STATUS.SHIPPED,
+      ORDER_STATUS.DELIVERED,
+    ] as const;
 
     orders.forEach((order) => {
       if (order.status === ORDER_STATUS.PENDING) {
         pendingOrders++;
       } else if (order.status === ORDER_STATUS.PAID) {
         paidOrders++;
-      } else if(order.status === ORDER_STATUS.PAYMENT_VALIDATED){
+      } else if (order.status === ORDER_STATUS.PAYMENT_VALIDATED) {
         validatedPayments++;
         totalAmount += order.totalAmount;
-      }else if (order.status === ORDER_STATUS.PAYMENT_INVALIDATED){
+      } else if (order.status === ORDER_STATUS.PAYMENT_INVALIDATED) {
         InvalidatedPayments++;
       } else if (order.status === ORDER_STATUS.SHIPPED) {
         shippedOrders++;
@@ -236,8 +267,15 @@ export class OrderService {
       } else if (order.status === ORDER_STATUS.CANCELLED) {
         cancelledOrders++;
       }
-      
-      if (paidStatuses.includes(order.status as typeof ORDER_STATUS.PAYMENT_VALIDATED | typeof ORDER_STATUS.SHIPPED | typeof ORDER_STATUS.DELIVERED)) {
+
+      if (
+        paidStatuses.includes(
+          order.status as
+            | typeof ORDER_STATUS.PAYMENT_VALIDATED
+            | typeof ORDER_STATUS.SHIPPED
+            | typeof ORDER_STATUS.DELIVERED,
+        )
+      ) {
         const month = order.createdAt.toISOString().slice(0, 7);
         const year = order.createdAt.getFullYear();
         monthlyStats[month] = (monthlyStats[month] || 0) + order.totalAmount;
