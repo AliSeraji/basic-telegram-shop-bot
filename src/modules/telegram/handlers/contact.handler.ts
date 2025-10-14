@@ -22,13 +22,14 @@ export class ContactHandler {
 
       try {
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
+        const language = user.language || 'fa';
 
         if (!msg.contact || msg.contact.user_id !== msg.from.id) {
-          this.logger.warn(`Noto‘g‘ri kontakt: ${JSON.stringify(msg.contact)}`);
-          const message = language === 'uz'
-            ? 'Faqat o‘zingizning telefon raqamingizni ulashingiz mumkin. Iltimos, "Telefon raqamni yuborish" tugmasini bosing.'
-            : 'Вы можете поделиться только своим номером телефона. Пожалуйста, нажмите кнопку "Отправить номер телефона".';
+          this.logger.warn(`مخاطب نامعتبر: ${JSON.stringify(msg.contact)}`);
+          const message =
+            language === 'fa'
+              ? 'شما فقط می‌توانید شماره تلفن خود را به اشتراک بگذارید. لطفاً دکمه "ارسال شماره تلفن" را فشار دهید.'
+              : 'You can only share your own phone number. Please press the "Send phone number" button.';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: getMainKeyboard(true, language),
           });
@@ -37,22 +38,26 @@ export class ContactHandler {
 
         const phone = msg.contact.phone_number;
 
-        this.logger.log(`Telefon qabul qilindi: ${phone} telegramId: ${telegramId}`);
+        this.logger.log(
+          `شماره تلفن دریافت شد: ${phone} telegramId: ${telegramId}`,
+        );
         await this.userService.updatePhoneNumber(telegramId, phone);
 
-        const message = language === 'uz'
-          ? `✅ Telefon raqamingiz saqlandi: ${phone}\nEndi do‘konimizdan bemalol foydalanishingiz mumkin!`
-          : `✅ Ваш номер телефона сохранен: ${phone}\nТеперь вы можете свободно пользоваться нашим магазином!`;
+        const message =
+          language === 'fa'
+            ? `✅ شماره تلفن شما ذخیره شد: ${phone}\nاکنون می‌توانید به راحتی از فروشگاه ما استفاده کنید!`
+            : `✅ Your phone number has been saved: ${phone}\nNow you can freely use our store!`;
         await this.telegramService.sendMessage(chatId, message, {
           reply_markup: getMainKeyboard(false, language),
         });
       } catch (error) {
-        this.logger.error(`Telefonni saqlashda xato: ${error.message}`);
+        this.logger.error(`خطا در ذخیره شماره تلفن: ${error.message}`);
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
-        const message = language === 'uz'
-          ? '❌ Telefon raqamingizni saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko‘ring.'
-          : '❌ Ошибка при сохранении номера телефона. Пожалуйста, попробуйте снова.';
+        const language = user.language || 'fa';
+        const message =
+          language === 'fa'
+            ? '❌ خطا در ذخیره شماره تلفن شما رخ داد. لطفاً دوباره امتحان کنید.'
+            : '❌ Error occurred while saving phone number. Please try again.';
         await this.telegramService.sendMessage(chatId, message);
       }
     });

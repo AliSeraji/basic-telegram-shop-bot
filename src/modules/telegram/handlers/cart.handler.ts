@@ -15,45 +15,68 @@ export class CartHandler {
   ) {}
   handle() {
     const bot = this.telegramService.getBotInstance();
-    bot.onText(/🛒 (Savatcha|Корзина)/, async (msg) => {
+    bot.onText(/🛒 (سبد خرید|Cart)/, async (msg) => {
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
+        const language = user.language || 'fa';
         this.logger.log(`Processing cart for telegramId: ${telegramId}`);
         const startTime = Date.now();
         const cartItems = await this.cartService.getCartItems(telegramId);
         const duration = Date.now() - startTime;
-        this.logger.log(`Fetched ${cartItems.length} cart items in ${duration}ms`);
+        this.logger.log(
+          `Fetched ${cartItems.length} cart items in ${duration}ms`,
+        );
         if (!cartItems.length) {
-          const message = language === 'uz' ? 'Savatchangiz bo‘sh.' : 'Ваша корзина пуста.';
+          const message =
+            language === 'fa'
+              ? 'سبد خرید شما خالی است.'
+              : 'Your cart is empty.';
           await this.telegramService.sendMessage(chatId, message);
           return;
         }
-        let message = language === 'uz' ? 'Savatchangiz:\n' : 'Ваша корзина:\n';
+        let message = language === 'fa' ? 'سبد خرید شما:\n' : 'Your cart:\n';
         let total = 0;
         cartItems.forEach((item) => {
-          const itemText = language === 'uz'
-            ? `${item.product.name} - ${item.quantity} dona, Narxi: ${item.product.price * item.quantity} so‘m\n`
-            : `${item.product.name} - ${item.quantity} шт., Цена: ${item.product.price * item.quantity} сум\n`;
+          const itemText =
+            language === 'fa'
+              ? `${item.product.name} - ${item.quantity} عدد، قیمت: ${item.product.price * item.quantity} تومان\n`
+              : `${item.product.name} - ${item.quantity} pcs., Price: ${item.product.price * item.quantity} sum\n`;
           message += itemText;
           total += item.product.price * item.quantity;
         });
-        message += language === 'uz' ? `Jami: ${total} so‘m` : `Итого: ${total} сум`;
+        message +=
+          language === 'fa' ? `جمع کل: ${total} تومان` : `Total: ${total} sum`;
         await this.telegramService.sendMessage(chatId, message, {
           reply_markup: {
             inline_keyboard: [
-              [{ text: language === 'uz' ? '✅ Buyurtma berish' : '✅ Оформить заказ', callback_data: 'place_order' }],
-              [{ text: language === 'uz' ? '🗑️ Savatchani tozalash' : '🗑️ Очистить корзину', callback_data: 'clear_cart' }],
+              [
+                {
+                  text: language === 'fa' ? '✅ ثبت سفارش' : '✅ Place order',
+                  callback_data: 'place_order',
+                },
+              ],
+              [
+                {
+                  text:
+                    language === 'fa'
+                      ? '🗑️ پاک کردن سبد خرید'
+                      : '🗑️ Clear cart',
+                  callback_data: 'clear_cart',
+                },
+              ],
             ],
           },
         });
       } catch (error) {
         this.logger.error(`Error in cart: ${error.message}`);
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
-        const message = language === 'uz' ? 'Savatchani olishda xato yuz berdi.' : 'Ошибка при получении корзины.';
+        const language = user.language || 'fa';
+        const message =
+          language === 'fa'
+            ? 'خطا در دریافت سبد خرید رخ داد.'
+            : 'Error occurred while getting cart.';
         await this.telegramService.sendMessage(chatId, message);
       }
     });

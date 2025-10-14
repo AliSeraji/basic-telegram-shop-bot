@@ -19,7 +19,8 @@ export class StartHandler {
     bot.onText(/\/start/, async (msg) => {
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
-      const fullName = `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
+      const fullName =
+        `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
 
       let user = await this.userService.registerUser({ telegramId, fullName });
 
@@ -30,9 +31,10 @@ export class StartHandler {
 
       const hasPhone = !!user.phone && user.phone.trim() !== '';
       if (!hasPhone) {
-        const message = user.language === 'ru'
-          ? '📞 Пожалуйста, отправьте ваш номер телефона:'
-          : '📞 Iltimos, telefon raqamingizni yuboring:';
+        const message =
+          user.language === 'en'
+            ? '📞 Please send your phone number:'
+            : '📞 لطفاً شماره تلفن خود را ارسال کنید:';
         await this.telegramService.sendMessage(chatId, message, {
           parse_mode: 'HTML',
           reply_markup: getMainKeyboard(true, user.language),
@@ -40,18 +42,20 @@ export class StartHandler {
         return;
       }
 
-      const message = user.language === 'ru'
-        ? `👋 Добро пожаловать обратно, ${fullName}! 🛍️ Пользуйтесь нашим магазином.`
-        : `👋 Qaytganingizdan xursandmiz, ${fullName}! 🛒 Do‘konimizdan bemalol foydalaning!`;
+      const message =
+        user.language === 'en'
+          ? `👋 Welcome back, ${fullName}! 🛍️ Feel free to use our store.`
+          : `👋 خوش آمدید، ${fullName}! 🛒 از فروشگاه ما استفاده کنید!`;
       await this.telegramService.sendMessage(chatId, message, {
         parse_mode: 'HTML',
         reply_markup: getMainKeyboard(false, user.language),
       });
     });
 
-    bot.onText(/\/language|tilni o‘zgartirish|изменить язык/i, async (msg) => {
+    bot.onText(/\/language|تغییر زبان|change language/i, async (msg) => {
       const chatId = msg.chat.id;
-      const fullName = `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
+      const fullName =
+        `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
       await this.sendLanguageSelection(chatId, fullName, false);
     });
 
@@ -60,18 +64,19 @@ export class StartHandler {
       const telegramId = query.from.id.toString();
       const data = query.data;
 
-      if (data !== 'lang_uz' && data !== 'lang_ru') {
+      if (data !== 'lang_fa' && data !== 'lang_en') {
         await bot.answerCallbackQuery(query.id);
         return;
       }
 
-      const newLang = data === 'lang_uz' ? 'uz' : 'ru';
+      const newLang = data === 'lang_fa' ? 'fa' : 'en';
       let user = await this.userService.findByTelegramId(telegramId);
 
       if (user.language === newLang) {
-        const message = newLang === 'ru'
-          ? '✅ Язык уже установлен на русский!'
-          : '✅ Til allaqachon o‘zbek tilida!';
+        const message =
+          newLang === 'en'
+            ? '✅ Language is already set to English!'
+            : '✅ زبان از قبل فارسی است!';
         const hasPhone = !!user.phone && user.phone.trim() !== '';
         await this.telegramService.sendMessage(chatId, message, {
           parse_mode: 'HTML',
@@ -82,11 +87,12 @@ export class StartHandler {
       }
 
       await this.userService.updateLanguage(telegramId, newLang);
-      user = await this.userService.findByTelegramId(telegramId); // Yangi ma'lumotlarni olish
+      user = await this.userService.findByTelegramId(telegramId); // دریافت اطلاعات جدید
 
-      const confirmMessage = newLang === 'ru'
-        ? '✅ Язык изменён на русский!'
-        : '✅ Til o‘zbekchaga o‘zgartirildi!';
+      const confirmMessage =
+        newLang === 'en'
+          ? '✅ Language changed to English!'
+          : '✅ زبان به فارسی تغییر یافت!';
       const hasPhone = !!user.phone && user.phone.trim() !== '';
       await this.telegramService.sendMessage(chatId, confirmMessage, {
         parse_mode: 'HTML',
@@ -94,9 +100,10 @@ export class StartHandler {
       });
 
       if (!hasPhone) {
-        const phoneMessage = newLang === 'ru'
-          ? '📞 Пожалуйста, отправьте ваш номер телефона:'
-          : '📞 Iltimos, telefon raqamingizni yuboring:';
+        const phoneMessage =
+          newLang === 'en'
+            ? '📞 Please send your phone number:'
+            : '📞 لطفاً شماره تلفن خود را ارسال کنید:';
         await this.telegramService.sendMessage(chatId, phoneMessage, {
           parse_mode: 'HTML',
           reply_markup: getMainKeyboard(true, newLang),
@@ -107,18 +114,22 @@ export class StartHandler {
     });
   }
 
-  private async sendLanguageSelection(chatId: number, fullName: string, isWelcome: boolean = false) {
+  private async sendLanguageSelection(
+    chatId: number,
+    fullName: string,
+    isWelcome: boolean = false,
+  ) {
     const message = isWelcome
-      ? `👋 Xush kelibsiz, ${fullName}!\n\n🌐 Iltimos, tilni tanlang:\n🌐 Пожалуйста, выберите язык:`
-      : `🌐 Iltimos, tilni tanlang:\n🌐 Пожалуйста, выберите язык:`;
+      ? `👋 خوش آمدید، ${fullName}!\n\n🌐 لطفاً زبان را انتخاب کنید:\n🌐 Please select a language:`
+      : `🌐 لطفاً زبان را انتخاب کنید:\n🌐 Please select a language:`;
 
     await this.telegramService.sendMessage(chatId, message, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '🇺🇿 O‘zbekcha', callback_data: 'lang_uz' },
-            { text: '🇷🇺 Русский', callback_data: 'lang_ru' },
+            { text: '🇮🇷 فارسی', callback_data: 'lang_fa' },
+            { text: '🇬🇧 English', callback_data: 'lang_en' },
           ],
         ],
         one_time_keyboard: true,

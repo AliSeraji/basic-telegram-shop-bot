@@ -16,28 +16,38 @@ export class CategoriesHandler {
 
   handle() {
     const bot = this.telegramService.getBotInstance();
-    bot.onText(/📁 (Kategoriyalar|Категории)/, async (msg) => {
+    bot.onText(/📁 (دسته‌بندی‌ها|Categories)/, async (msg) => {
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
+        const language = user.language || 'fa';
         this.logger.log(`Processing categories for telegramId: ${telegramId}`);
         const startTime = Date.now();
         const categories = await this.categoryService.findAll();
         const duration = Date.now() - startTime;
-        this.logger.log(`Fetched ${categories.length} categories in ${duration}ms`);
+        this.logger.log(
+          `Fetched ${categories.length} categories in ${duration}ms`,
+        );
         const keyboard = categories.map((cat) => [
-       { text: language === 'uz' ? cat.name : cat.nameRu || cat.name, callback_data: `category_${cat.id}` },]);
-        const message = language === 'uz' ? 'Kategoriyalarni tanlang:' : 'Выберите категорию:';
+          {
+            text: language === 'fa' ? cat.name : cat.nameRu || cat.name,
+            callback_data: `category_${cat.id}`,
+          },
+        ]);
+        const message =
+          language === 'fa' ? 'دسته‌بندی را انتخاب کنید:' : 'Select category:';
         await this.telegramService.sendMessage(chatId, message, {
           reply_markup: { inline_keyboard: keyboard },
         });
       } catch (error) {
         this.logger.error(`Error in categories: ${error.message}`);
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
-        const message = language === 'uz' ? 'Kategoriyalarni olishda xato yuz berdi.' : 'Ошибка при получении категорий.';
+        const language = user.language || 'fa';
+        const message =
+          language === 'fa'
+            ? 'خطا در دریافت دسته‌بندی‌ها رخ داد.'
+            : 'Error occurred while getting categories.';
         await this.telegramService.sendMessage(chatId, message);
       }
     });

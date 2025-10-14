@@ -36,18 +36,27 @@ export class UserCallbackHandler {
       const telegramId = query.from.id.toString();
       const data = query.data;
       try {
-        this.logger.log(`Processing user callback: ${data} for telegramId: ${telegramId}`);
+        this.logger.log(
+          `Processing user callback: ${data} for telegramId: ${telegramId}`,
+        );
         let user = await this.userService.findByTelegramId(telegramId);
-        let language = user.language || 'uz';
+        let language = user.language || 'fa';
 
         if (data.startsWith('category_')) {
           const categoryId = parseInt(data.split('_')[1]);
           const products = await this.productService.findByCategory(categoryId);
-          const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map((prod) => [
-            { text: `${language === 'uz' ? prod.name : prod.nameRu || prod.name} - ${prod.price} so‘m`, callback_data: `product_${prod.id}` },
-          ]);
-          const message = language === 'uz' ? '📦 Mahsulotlar:' : '📦 Товары:';
-          await this.telegramService.sendMessage(chatId, message, { reply_markup: { inline_keyboard: keyboard } });
+          const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map(
+            (prod) => [
+              {
+                text: `${language === 'fa' ? prod.name : prod.nameRu || prod.name} - ${prod.price} تومان`,
+                callback_data: `product_${prod.id}`,
+              },
+            ],
+          );
+          const message = language === 'fa' ? '📦 محصولات:' : '📦 Products:';
+          await this.telegramService.sendMessage(chatId, message, {
+            reply_markup: { inline_keyboard: keyboard },
+          });
         } else if (data.startsWith('product_')) {
           const productId = parseInt(data.split('_')[1]);
           const product = await this.productService.findOne(productId);
@@ -55,34 +64,69 @@ export class UserCallbackHandler {
             caption: formatProductMessage(product, language),
             reply_markup: {
               inline_keyboard: [
-                [{ text: language === 'uz' ? '➕ Savatchaga qo‘shish' : '➕ Добавить в корзину', callback_data: `addtocart_${productId}` }],
-                [{ text: language === 'uz' ? '⭐ Feedback qoldirish' : '⭐ Оставить отзыв', callback_data: `feedback_${productId}` }],
+                [
+                  {
+                    text:
+                      language === 'fa'
+                        ? '➕ افزودن به سبد خرید'
+                        : '➕ Add to cart',
+                    callback_data: `addtocart_${productId}`,
+                  },
+                ],
+                [
+                  {
+                    text:
+                      language === 'fa'
+                        ? '⭐ ثبت بازخورد'
+                        : '⭐ Leave feedback',
+                    callback_data: `feedback_${productId}`,
+                  },
+                ],
               ],
             },
           });
         } else if (data.startsWith('addtocart_')) {
           const productId = parseInt(data.split('_')[1]);
-          await this.cartService.addToCart({ telegramId, productId, quantity: 1 });
-          const message = language === 'uz' ? '✅ Mahsulot savatchaga qo‘shildi.' : '✅ Товар добавлен в корзину.';
+          await this.cartService.addToCart({
+            telegramId,
+            productId,
+            quantity: 1,
+          });
+          const message =
+            language === 'fa'
+              ? '✅ محصول به سبد خرید اضافه شد.'
+              : '✅ Product added to cart.';
           await this.telegramService.sendMessage(chatId, message, {});
         } else if (data === 'place_order') {
           const order = await this.orderService.createOrder(telegramId);
-          const message = language === 'uz'
-            ? '📍 Iltimos, yetkazib berish manzilingizni yuboring:'
-            : '📍 Пожалуйста, отправьте адрес доставки:';
+          const message =
+            language === 'fa'
+              ? '📍 لطفاً آدرس تحویل خود را ارسال کنید:'
+              : '📍 Please send your delivery address:';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: {
-              keyboard: [[{ text: language === 'uz' ? '📍 Manzilni yuborish' : '📍 Отправить адрес', request_location: true }]],
+              keyboard: [
+                [
+                  {
+                    text:
+                      language === 'fa' ? '📍 ارسال آدرس' : '📍 Send address',
+                    request_location: true,
+                  },
+                ],
+              ],
               one_time_keyboard: true,
               resize_keyboard: true,
             },
           });
           bot.once('location', async (msg) => {
             try {
-              const detailsMessage = language === 'uz'
-                ? '🏠 Iltimos, xonadon raqami, qavat yoki qo‘shimcha ma’lumotlarni kiriting (masalan: 12-xonadon, 3-qavat):'
-                : '🏠 Пожалуйста, укажите номер квартиры, этаж или дополнительные сведения (например: квартира 12, 3 этаж):';
-              await this.telegramService.sendMessage(chatId, detailsMessage, { reply_markup: { force_reply: true } });
+              const detailsMessage =
+                language === 'fa'
+                  ? '🏠 لطفاً شماره واحد، طبقه یا اطلاعات تکمیلی را وارد کنید (مثلاً: واحد 12، طبقه 3):'
+                  : '🏠 Please provide apartment number, floor or additional details (e.g.: apartment 12, floor 3):';
+              await this.telegramService.sendMessage(chatId, detailsMessage, {
+                reply_markup: { force_reply: true },
+              });
               bot.once('message', async (msgDetails) => {
                 try {
                   const delivery = await this.deliveryService.create({
@@ -91,46 +135,74 @@ export class UserCallbackHandler {
                     longitude: msg.location.longitude,
                     addressDetails: msgDetails.text,
                   });
-                  const items = order.orderItems?.map((item) => `${language === 'uz' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'uz' ? 'dona' : 'шт.'}`).join(', ');
-                  const message = language === 'uz'
-                    ? `💳 Buyurtma yaratildi! Iltimos, quyidagi havola orqali to‘lovni amalga oshiring.\n` +
-                      `  📋 ID: ${order.id}\n` +
-                      `  👤 Foydalanuvchi: ${order.user?.fullName || 'Kiritilmagan'}\n` +
-                      `  📦 Mahsulotlar: ${items || 'N/A'}\n` +
-                      `  💸 Jami: ${order.totalAmount} so‘m\n` +
-                      `  📍 Manzil: (${delivery.latitude}, ${delivery.longitude})\n` +
-                      `  🏠 Qo‘shimcha: ${delivery.addressDetails || 'N/A'}\n` +
-                      `━━━━━━━━━━━━━━━`
-                    : `💳 Заказ создан! Пожалуйста, оплатите по следующей ссылке.\n` +
-                      `  📋 ID: ${order.id}\n` +
-                      `  👤 Пользователь: ${order.user?.fullName || 'Не указано'}\n` +
-                      `  📦 Товары: ${items || 'N/A'}\n` +
-                      `  💸 Итого: ${order.totalAmount} so‘m\n` +
-                      `  📍 Адрес: (${delivery.latitude}, ${delivery.longitude})\n` +
-                      `  🏠 Дополнительно: ${delivery.addressDetails || 'N/A'}\n` +
-                      `━━━━━━━━━━━━━━━`;
+                  const items = order.orderItems
+                    ?.map(
+                      (item) =>
+                        `${language === 'fa' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+                    )
+                    .join(', ');
+                  const message =
+                    language === 'fa'
+                      ? `💳 سفارش ایجاد شد! لطفاً از طریق لینک زیر پرداخت را انجام دهید.\n` +
+                        `  📋 شناسه: ${order.id}\n` +
+                        `  👤 کاربر: ${order.user?.fullName || 'وارد نشده'}\n` +
+                        `  📦 محصولات: ${items || 'N/A'}\n` +
+                        `  💸 جمع کل: ${order.totalAmount} تومان\n` +
+                        `  📍 آدرس: (${delivery.latitude}, ${delivery.longitude})\n` +
+                        `  🏠 جزئیات: ${delivery.addressDetails || 'N/A'}\n` +
+                        `━━━━━━━━━━━━━━━`
+                      : `💳 Order created! Please pay via the following link.\n` +
+                        `  📋 ID: ${order.id}\n` +
+                        `  👤 User: ${order.user?.fullName || 'Not specified'}\n` +
+                        `  📦 Products: ${items || 'N/A'}\n` +
+                        `  💸 Total: ${order.totalAmount} sum\n` +
+                        `  📍 Address: (${delivery.latitude}, ${delivery.longitude})\n` +
+                        `  🏠 Details: ${delivery.addressDetails || 'N/A'}\n` +
+                        `━━━━━━━━━━━━━━━`;
                   await this.telegramService.sendMessage(chatId, message, {
                     parse_mode: 'HTML',
                     reply_markup: {
                       inline_keyboard: [
-                        [{ text: language === 'uz' ? '💵 Click orqali to‘lash' : '💵 Оплатить через Click', callback_data: `confirm_payment_${order.id}_click` }],
-                        [{ text: language === 'uz' ? '💵 Payme orqali to‘lash' : '💵 Оплатить через Payme', callback_data: `confirm_payment_${order.id}_payme` }],
+                        [
+                          {
+                            text:
+                              language === 'fa'
+                                ? '💵 پرداخت از طریق Click'
+                                : '💵 Pay via Click',
+                            callback_data: `confirm_payment_${order.id}_click`,
+                          },
+                        ],
+                        [
+                          {
+                            text:
+                              language === 'fa'
+                                ? '💵 پرداخت از طریق Payme'
+                                : '💵 Pay via Payme',
+                            callback_data: `confirm_payment_${order.id}_payme`,
+                          },
+                        ],
                       ],
                     },
                   });
                 } catch (error) {
                   this.logger.error(`Error in delivery: ${error.message}`);
-                  const errorMessage = language === 'uz'
-                    ? '❌ Yetkazib berish ma’lumotlarini saqlashda xato yuz berdi.'
-                    : '❌ Ошибка при сохранении данных доставки.';
-                  await this.telegramService.sendMessage(chatId, errorMessage, {});
+                  const errorMessage =
+                    language === 'fa'
+                      ? '❌ خطا در ذخیره اطلاعات تحویل رخ داد.'
+                      : '❌ Error occurred while saving delivery data.';
+                  await this.telegramService.sendMessage(
+                    chatId,
+                    errorMessage,
+                    {},
+                  );
                 }
               });
             } catch (error) {
               this.logger.error(`Error in delivery: ${error.message}`);
-              const errorMessage = language === 'uz'
-                ? '❌ Yetkazib berish manzilini saqlashda xato yuz berdi.'
-                : '❌ Ошибка при сохранении адреса доставки.';
+              const errorMessage =
+                language === 'fa'
+                  ? '❌ خطا در ذخیره آدرس تحویل رخ داد.'
+                  : '❌ Error occurred while saving delivery address.';
               await this.telegramService.sendMessage(chatId, errorMessage, {});
             }
           });
@@ -139,11 +211,16 @@ export class UserCallbackHandler {
           const orderId = parseInt(parts[2], 10);
           const paymentType = parts[3];
 
-          this.logger.log(`Confirming payment for orderId: ${orderId}, paymentType: ${paymentType}`);
+          this.logger.log(
+            `Confirming payment for orderId: ${orderId}, paymentType: ${paymentType}`,
+          );
 
           if (![PAYMENT_TYPE.CLICK, PAYMENT_TYPE.PAYME].includes(paymentType)) {
             this.logger.error(`Invalid payment type: ${paymentType}`);
-            const errorMessage = language === 'uz' ? '❌ Noto‘g‘ri to‘lov turi.' : '❌ Неверный тип оплаты.';
+            const errorMessage =
+              language === 'fa'
+                ? '❌ نوع پرداخت نامعتبر است.'
+                : '❌ Invalid payment type.';
             await this.telegramService.sendMessage(chatId, errorMessage, {});
             return;
           }
@@ -151,15 +228,21 @@ export class UserCallbackHandler {
           const order = await this.orderService.findOne(orderId);
           if (!order) {
             this.logger.error(`Order not found for ID: ${orderId}`);
-            const errorMessage = language === 'uz' ? '❌ Buyurtma topilmadi.' : '❌ Заказ не найден.';
+            const errorMessage =
+              language === 'fa' ? '❌ سفارش یافت نشد.' : '❌ Order not found.';
             await this.telegramService.sendMessage(chatId, errorMessage, {});
             return;
           }
 
-          const delivery = await this.deliveryService.findOneByOrderId(order.id);
+          const delivery = await this.deliveryService.findOneByOrderId(
+            order.id,
+          );
           if (!delivery) {
             this.logger.error(`Delivery not found for order ID: ${orderId}`);
-            const errorMessage = language === 'uz' ? '❌ Yetkazib berish ma’lumotlari topilmadi.' : '❌ Данные доставки не найдены.';
+            const errorMessage =
+              language === 'fa'
+                ? '❌ اطلاعات تحویل یافت نشد.'
+                : '❌ Delivery data not found.';
             await this.telegramService.sendMessage(chatId, errorMessage, {});
             return;
           }
@@ -167,43 +250,56 @@ export class UserCallbackHandler {
           await this.orderService.updateStatus(orderId, ORDER_STATUS.PAID);
           await this.orderService.update(orderId, { paymentType });
 
-          const items = order.orderItems?.map((item) => `${language === 'uz' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'uz' ? 'dona' : 'шт.'}`).join(', ');
-          const message = language === 'uz'
-            ? `✅ Buyurtma tasdiqlandi!\n` +
-              `  📋 ID: ${order.id}\n` +
-              `  👤 Foydalanuvchi: ${order.user?.fullName || 'Kiritilmagan'}\n` +
-              `  📦 Mahsulotlar: ${items || 'N/A'}\n` +
-              `  💸 Jami: ${order.totalAmount} so‘m\n` +
-              `  📊 Status: ${order.status}\n` +
-              `  💵 To‘lov turi: ${paymentType}\n` +
-              `  📍 Manzil: (${delivery.latitude}, ${delivery.longitude})\n` +
-              `  🏠 Qo‘shimcha: ${delivery.addressDetails || 'N/A'}\n` +
-              `  🚚 Yetkazib beruvchi: ${delivery.courierName || 'N/A'}\n` +
-              `  📞 Telefon: ${delivery.courierPhone || 'N/A'}\n` +
-              `  📅 Taxminiy yetkazib berish sanasi: ${delivery.deliveryDate?.toLocaleString('uz-UZ') || 'N/A'}\n` +
-              `━━━━━━━━━━━━━━━`
-            : `✅ Заказ подтвержден!\n` +
-              `  📋 ID: ${order.id}\n` +
-              `  👤 Пользователь: ${order.user?.fullName || 'Не указано'}\n` +
-              `  📦 Товары: ${items || 'N/A'}\n` +
-              `  💸 Итого: ${order.totalAmount} so‘m\n` +
-              `  📊 Статус: ${order.status}\n` +
-              `  💵 Тип оплаты: ${paymentType}\n` +
-              `  📍 Адрес: (${delivery.latitude}, ${delivery.longitude})\n` +
-              `  🏠 Дополнительно: ${delivery.addressDetails || 'N/A'}\n` +
-              `  🚚 Курьер: ${delivery.courierName || 'N/A'}\n` +
-              `  📞 Телефон: ${delivery.courierPhone || 'N/A'}\n` +
-              `  📅 Ориентировочная дата доставки: ${delivery.deliveryDate?.toLocaleString('ru-RU') || 'N/A'}\n` +
-              `━━━━━━━━━━━━━━━`;
+          const items = order.orderItems
+            ?.map(
+              (item) =>
+                `${language === 'fa' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+            )
+            .join(', ');
+          const message =
+            language === 'fa'
+              ? `✅ سفارش تایید شد!\n` +
+                `  📋 شناسه: ${order.id}\n` +
+                `  👤 کاربر: ${order.user?.fullName || 'وارد نشده'}\n` +
+                `  📦 محصولات: ${items || 'N/A'}\n` +
+                `  💸 جمع کل: ${order.totalAmount} تومان\n` +
+                `  📊 وضعیت: ${order.status}\n` +
+                `  💵 نوع پرداخت: ${paymentType}\n` +
+                `  📍 آدرس: (${delivery.latitude}, ${delivery.longitude})\n` +
+                `  🏠 جزئیات: ${delivery.addressDetails || 'N/A'}\n` +
+                `  🚚 پیک: ${delivery.courierName || 'N/A'}\n` +
+                `  📞 تلفن: ${delivery.courierPhone || 'N/A'}\n` +
+                `  📅 تاریخ تحویل تقریبی: ${delivery.deliveryDate?.toLocaleString('fa-IR') || 'N/A'}\n` +
+                `━━━━━━━━━━━━━━━`
+              : `✅ Order confirmed!\n` +
+                `  📋 ID: ${order.id}\n` +
+                `  👤 User: ${order.user?.fullName || 'Not specified'}\n` +
+                `  📦 Products: ${items || 'N/A'}\n` +
+                `  💸 Total: ${order.totalAmount} sum\n` +
+                `  📊 Status: ${order.status}\n` +
+                `  💵 Payment type: ${paymentType}\n` +
+                `  📍 Address: (${delivery.latitude}, ${delivery.longitude})\n` +
+                `  🏠 Details: ${delivery.addressDetails || 'N/A'}\n` +
+                `  🚚 Courier: ${delivery.courierName || 'N/A'}\n` +
+                `  📞 Phone: ${delivery.courierPhone || 'N/A'}\n` +
+                `  📅 Estimated delivery date: ${delivery.deliveryDate?.toLocaleString('en-US') || 'N/A'}\n` +
+                `━━━━━━━━━━━━━━━`;
 
-          await this.telegramService.sendMessage(chatId, message, { parse_mode: 'HTML' });
+          await this.telegramService.sendMessage(chatId, message, {
+            parse_mode: 'HTML',
+          });
           const admins = await this.userService.findAllAdmins();
           for (const admin of admins) {
-            await this.telegramService.sendMessage(admin.telegramId, message, { parse_mode: 'HTML' });
+            await this.telegramService.sendMessage(admin.telegramId, message, {
+              parse_mode: 'HTML',
+            });
           }
         } else if (data.startsWith('feedback_')) {
           const productId = parseInt(data.split('_')[1]);
-          const message = language === 'uz' ? '⭐ Reytingni tanlang:' : '⭐ Выберите рейтинг:';
+          const message =
+            language === 'fa'
+              ? '⭐ امتیاز را انتخاب کنید:'
+              : '⭐ Select rating:';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: {
               inline_keyboard: [
@@ -219,8 +315,13 @@ export class UserCallbackHandler {
           });
         } else if (data.startsWith('rate_')) {
           const [_, productId, rating] = data.split('_');
-          const message = language === 'uz' ? '💬 Izoh yozing:' : '💬 Напишите комментарий:';
-          await this.telegramService.sendMessage(chatId, message, { reply_markup: { force_reply: true } });
+          const message =
+            language === 'fa'
+              ? '💬 نظر خود را بنویسید:'
+              : '💬 Write your comment:';
+          await this.telegramService.sendMessage(chatId, message, {
+            reply_markup: { force_reply: true },
+          });
           bot.once('message', async (msg) => {
             try {
               await this.feedbackService.create({
@@ -229,38 +330,70 @@ export class UserCallbackHandler {
                 rating: parseInt(rating),
                 comment: msg.text,
               });
-              const successMessage = language === 'uz' ? '✅ Feedback qabul qilindi!' : '✅ Отзыв принят!';
-              await this.telegramService.sendMessage(chatId, successMessage, {});
+              const successMessage =
+                language === 'fa'
+                  ? '✅ بازخورد دریافت شد!'
+                  : '✅ Feedback received!';
+              await this.telegramService.sendMessage(
+                chatId,
+                successMessage,
+                {},
+              );
             } catch (error) {
               this.logger.error(`Error in feedback: ${error.message}`);
-              const errorMessage = language === 'uz' ? '❌ Feedback qoldirishda xato yuz berdi.' : '❌ Ошибка при отправке отзыва.';
+              const errorMessage =
+                language === 'fa'
+                  ? '❌ خطا در ثبت بازخورد رخ داد.'
+                  : '❌ Error occurred while submitting feedback.';
               await this.telegramService.sendMessage(chatId, errorMessage, {});
             }
           });
         } else if (data === 'clear_cart') {
           await this.cartService.clearCart(telegramId);
-          const message = language === 'uz' ? '🗑 Savatcha tozalandi.' : '🗑 Корзина очищена.';
+          const message =
+            language === 'fa' ? '🗑 سبد خرید پاک شد.' : '🗑 Cart cleared.';
           await this.telegramService.sendMessage(chatId, message, {});
         } else if (data.startsWith('view_orders_')) {
           const page = parseInt(data.split('_')[2]) || 1;
-          const orders = await this.orderService.getUserOrders(telegramId, page, 10);
+          const orders = await this.orderService.getUserOrders(
+            telegramId,
+            page,
+            10,
+          );
           const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
           if (orders.length === 10) {
-            keyboard.push([{ text: language === 'uz' ? '➡️ Keyingi sahifa' : '➡️ Следующая страница', callback_data: `view_orders_${page + 1}` }]);
+            keyboard.push([
+              {
+                text: language === 'fa' ? '➡️ صفحه بعدی' : '➡️ Next page',
+                callback_data: `view_orders_${page + 1}`,
+              },
+            ]);
           }
           if (page > 1) {
-            keyboard.push([{ text: language === 'uz' ? '⬅️ Oldingi sahifa' : '⬅️ Предыдущая страница', callback_data: `view_orders_${page - 1}` }]);
+            keyboard.push([
+              {
+                text: language === 'fa' ? '⬅️ صفحه قبلی' : '⬅️ Previous page',
+                callback_data: `view_orders_${page - 1}`,
+              },
+            ]);
           }
-          await this.telegramService.sendMessage(chatId, formatOrderList(orders, language), {
-            reply_markup: { inline_keyboard: keyboard },
-            parse_mode: 'HTML',
-          });
+          await this.telegramService.sendMessage(
+            chatId,
+            formatOrderList(orders, language),
+            {
+              reply_markup: { inline_keyboard: keyboard },
+              parse_mode: 'HTML',
+            },
+          );
         }
       } catch (error) {
         this.logger.error(`Error in user callback: ${error.message}`);
         const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'uz';
-        const message = language === 'uz' ? '❌ Xatolik yuz berdi, iltimos keyinroq urinib ko‘ring.' : '❌ Произошла ошибка, попробуйте позже.';
+        const language = user.language || 'fa';
+        const message =
+          language === 'fa'
+            ? '❌ خطایی رخ داد، لطفاً بعداً دوباره امتحان کنید.'
+            : '❌ An error occurred, please try again later.';
         await this.telegramService.sendMessage(chatId, message, {});
       } finally {
         try {
