@@ -105,9 +105,9 @@ export class CallbackHandler {
                   try {
                     await this.categoryService.create({
                       name: name.trim(),
-                      nameRu: nameRu.trim(),
+                      nameFa: nameRu.trim(),
                       description: msgDesc.text.trim(),
-                      descriptionRu: msgDescRu.text.trim() || null,
+                      descriptionFa: msgDescRu.text.trim() || null,
                     });
                     const successMessage =
                       language === 'fa'
@@ -152,7 +152,7 @@ export class CallbackHandler {
           const categories = await this.categoryService.findAll();
           const keyboard = categories.map((cat) => [
             {
-              text: language === 'fa' ? cat.name : cat.nameRu || cat.name,
+              text: language === 'fa' ? cat.name : cat.nameFa || cat.name,
               callback_data: `edit_cat_${cat.id}`,
             },
           ]);
@@ -202,9 +202,9 @@ export class CallbackHandler {
                   try {
                     await this.categoryService.update(categoryId, {
                       name: name.trim(),
-                      nameRu: nameRu.trim(),
+                      nameFa: nameRu.trim(),
                       description: msgDesc.text.trim(),
-                      descriptionRu: msgDescRu.text.trim() || null,
+                      descriptionFa: msgDescRu.text.trim() || null,
                     });
                     const successMessage =
                       language === 'fa'
@@ -239,7 +239,7 @@ export class CallbackHandler {
           const categories = await this.categoryService.findAll();
           const keyboard = categories.map((cat) => [
             {
-              text: language === 'fa' ? cat.name : cat.nameRu || cat.name,
+              text: language === 'fa' ? cat.name : cat.nameFa || cat.name,
               callback_data: `delete_cat_${cat.id}`,
             },
           ]);
@@ -366,7 +366,7 @@ export class CallbackHandler {
           const products = await this.productService.findAll();
           const keyboard = products.map((prod) => [
             {
-              text: language === 'fa' ? prod.name : prod.nameRu || prod.name,
+              text: language === 'fa' ? prod.name : prod.nameJP || prod.name,
               callback_data: `edit_prod_${prod.id}`,
             },
           ]);
@@ -456,7 +456,7 @@ export class CallbackHandler {
           const products = await this.productService.findAll();
           const keyboard = products.map((prod) => [
             {
-              text: language === 'fa' ? prod.name : prod.nameRu || prod.name,
+              text: language === 'fa' ? prod.name : prod.nameJP || prod.name,
               callback_data: `delete_prod_${prod.id}`,
             },
           ]);
@@ -506,17 +506,18 @@ export class CallbackHandler {
           const userId = parseInt(data.split('_')[2]);
           const message =
             language === 'fa'
-              ? '👤 نام و شماره تلفن جدید را وارد کنید (نام;تلفن):'
-              : '👤 Enter new name and phone number (name;phone):';
+              ? '👤 نام و شماره تلفن جدید را وارد کنید (نام;تلفن;آدرس):'
+              : '👤 Enter new name and phone number (name;phone;Address):';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
           bot.once('message', async (msg) => {
             try {
-              const [fullName, phone] = msg.text.split(';');
+              const [fullName, phone, address] = msg.text.split(';');
               await this.userService.update(userId, {
                 fullName: fullName.trim(),
                 phone: phone.trim(),
+                userAddress: address.trim(),
               });
               const successMessage =
                 language === 'fa'

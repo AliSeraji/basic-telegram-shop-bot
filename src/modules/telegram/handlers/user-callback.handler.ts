@@ -48,7 +48,7 @@ export class UserCallbackHandler {
           const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map(
             (prod) => [
               {
-                text: `${language === 'fa' ? prod.name : prod.nameRu || prod.name} - ${prod.price} تومان`,
+                text: `${language === 'fa' ? prod.name : prod.nameJP || prod.name} - ${prod.price} تومان`,
                 callback_data: `product_${prod.id}`,
               },
             ],
@@ -138,7 +138,7 @@ export class UserCallbackHandler {
                   const items = order.orderItems
                     ?.map(
                       (item) =>
-                        `${language === 'fa' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+                        `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
                     )
                     .join(', ');
                   const message =
@@ -215,7 +215,7 @@ export class UserCallbackHandler {
             `Confirming payment for orderId: ${orderId}, paymentType: ${paymentType}`,
           );
 
-          if (![PAYMENT_TYPE.CLICK, PAYMENT_TYPE.PAYME].includes(paymentType)) {
+          if (![PAYMENT_TYPE.CLICK, PAYMENT_TYPE.CARD].includes(paymentType)) {
             this.logger.error(`Invalid payment type: ${paymentType}`);
             const errorMessage =
               language === 'fa'
@@ -253,7 +253,7 @@ export class UserCallbackHandler {
           const items = order.orderItems
             ?.map(
               (item) =>
-                `${language === 'fa' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+                `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
             )
             .join(', ');
           const message =

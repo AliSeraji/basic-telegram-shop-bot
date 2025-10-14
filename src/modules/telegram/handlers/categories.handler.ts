@@ -31,7 +31,7 @@ export class CategoriesHandler {
         );
         const keyboard = categories.map((cat) => [
           {
-            text: language === 'fa' ? cat.name : cat.nameRu || cat.name,
+            text: language === 'fa' ? cat.name : cat.nameFa || cat.name,
             callback_data: `category_${cat.id}`,
           },
         ]);

@@ -15,9 +15,9 @@ export function formatProductMessage(
       ? '❌ این محصول در انبار موجود نیست.'
       : '❌ This product is out of stock.';
   }
-  const name = language === 'fa' ? product.name : product.nameRu;
+  const name = language === 'fa' ? product.name : product.nameJP;
   const description =
-    language === 'fa' ? product.description : product.descriptionRu;
+    language === 'fa' ? product.description : product.description;
   return [
     `<b>${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}</b>`,
     `${description || (language === 'fa' ? 'بدون توضیحات' : 'No description')}`,
@@ -36,9 +36,9 @@ export function formatCategoryList(
       : '❌ No categories available.';
   return categories
     .map((cat) => {
-      const name = language === 'fa' ? cat.name : cat.nameRu;
+      const name = language === 'fa' ? cat.name : cat.nameFa;
       const description =
-        language === 'fa' ? cat.description : cat.descriptionRu;
+        language === 'fa' ? cat.description : cat.descriptionFa;
       return `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${cat.id}, <b>${language === 'fa' ? 'نام' : 'Name'}</b>: ${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}, <b>${language === 'fa' ? 'توضیحات' : 'Description'}</b>: ${description || (language === 'fa' ? 'بدون توضیحات' : 'No description')}`;
     })
     .join('\n');
@@ -59,11 +59,11 @@ export function formatProductList(
       : '❌ No products in stock.';
   return availableProducts
     .map((prod) => {
-      const name = language === 'fa' ? prod.name : prod.nameRu;
+      const name = language === 'fa' ? prod.name : prod.nameJP;
       const categoryName =
         language === 'fa'
           ? prod.category?.name || 'N/A'
-          : prod.category?.nameRu || 'N/A';
+          : prod.category?.nameFa || 'N/A';
       return `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${prod.id}, <b>${language === 'fa' ? 'نام' : 'Name'}</b>: ${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}, 💸 <b>${language === 'fa' ? 'قیمت' : 'Price'}</b>: ${prod.price} تومان, 📌 <b>${language === 'fa' ? 'دسته‌بندی' : 'Category'}</b>: ${categoryName}, 📦 <b>${language === 'fa' ? 'در انبار' : 'In stock'}</b>: ${prod.stock}`;
     })
     .join('\n');
@@ -93,7 +93,7 @@ export function formatFeedbackList(
   return feedbacks
     .map(
       (fb) =>
-        `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${fb.id}, 📦 <b>${language === 'fa' ? 'محصول' : 'Product'}</b>: ${language === 'fa' ? fb.product.name : fb.product.nameRu || fb.product.name}, 👤 <b>${language === 'fa' ? 'کاربر' : 'User'}</b>: ${fb.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, ⭐ <b>${language === 'fa' ? 'امتیاز' : 'Rating'}</b>: ${fb.rating}, 💬 <b>${language === 'fa' ? 'نظر' : 'Comment'}</b>: ${fb.comment}`,
+        `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${fb.id}, 📦 <b>${language === 'fa' ? 'محصول' : 'Product'}</b>: ${language === 'fa' ? fb.product.name : fb.product.nameJP || fb.product.name}, 👤 <b>${language === 'fa' ? 'کاربر' : 'User'}</b>: ${fb.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, ⭐ <b>${language === 'fa' ? 'امتیاز' : 'Rating'}</b>: ${fb.rating}, 💬 <b>${language === 'fa' ? 'نظر' : 'Comment'}</b>: ${fb.comment}`,
     )
     .join('\n');
 }
@@ -111,7 +111,7 @@ export function formatOrderList(
       const items = order.orderItems
         ?.map(
           (item) =>
-            `${language === 'fa' ? item.product.name : item.product.nameRu || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+            `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
         )
         .join(', ');
       const delivery =

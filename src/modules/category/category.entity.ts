@@ -11,13 +11,12 @@ export class Category {
 
   @Column()
   description: string;
-  
+
   @Column({ nullable: true })
   nameFa: string;
 
   @Column({ nullable: true })
   descriptionFa: string;
-
 
   @Column()
   createdAt: Date;
