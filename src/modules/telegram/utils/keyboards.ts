@@ -1,11 +1,10 @@
-import { TelegramBot } from 'node-telegram-bot-api';
 import { KeyboardOptions } from './interfaces';
 
 export function getMainKeyboard(
   showContact: boolean,
   language: string = 'fa',
-): TelegramBot.SendMessageOptions['reply_markup'] {
-  const keyboard: TelegramBot.KeyboardButton[][] = [
+): any {
+  const keyboard: any[][] = [
     [
       { text: language === 'fa' ? '📁 دسته‌بندی‌ها' : '📁 Categories' },
       { text: language === 'fa' ? '🛒 سبد خرید' : '🛒 Cart' },
@@ -38,9 +37,7 @@ export function getMainKeyboard(
   };
 }
 
-export function getAdminKeyboard(
-  language: string = 'fa',
-): TelegramBot.SendMessageOptions['reply_markup'] {
+export function getAdminKeyboard(language: string = 'fa'): any {
   return {
     inline_keyboard: [
       [

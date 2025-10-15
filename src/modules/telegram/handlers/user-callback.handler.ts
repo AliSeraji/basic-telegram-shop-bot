@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Telegraf } from 'telegraf';
 import { CategoryService } from '../../category/category.service';
 import { ProductService } from '../../product/product.service';
 import { CartService } from '../../cart/cart.service';
@@ -16,6 +16,7 @@ import { getMainKeyboard } from '../utils/keyboards';
 @Injectable()
 export class UserCallbackHandler {
   private logger = new Logger(UserCallbackHandler.name);
+  private userStates = new Map<string, any>();
 
   constructor(
     private categoryService: CategoryService,
@@ -31,10 +32,42 @@ export class UserCallbackHandler {
 
   handle() {
     const bot = this.telegramService.getBotInstance();
-    bot.on('callback_query', async (query) => {
-      const chatId = query.message.chat.id;
-      const telegramId = query.from.id.toString();
-      const data = query.data;
+
+    // Handle location messages
+    bot.on('location', async (ctx) => {
+      const telegramId = ctx.from.id.toString();
+      const state = this.userStates.get(telegramId);
+
+      if (state?.action === 'place_order') {
+        await this.handleLocation(ctx, telegramId, state);
+      }
+    });
+
+    // Handle text messages for feedback and delivery details
+    bot.on('text', async (ctx) => {
+      const telegramId = ctx.from.id.toString();
+      const state = this.userStates.get(telegramId);
+
+      if (!state) return;
+
+      const chatId = ctx.chat.id;
+      const text = ctx.message.text;
+
+      try {
+        await this.handleUserState(ctx, telegramId, chatId, text, state);
+      } catch (error) {
+        this.logger.error(`Error handling user state: ${error.message}`);
+        this.userStates.delete(telegramId);
+      }
+    });
+
+    bot.on('callback_query', async (ctx) => {
+      if (!ctx.chat || !ctx.from || !ctx.callbackQuery) return;
+      const query = ctx.callbackQuery;
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
+      const data = 'data' in query ? query.data : '';
+
       try {
         this.logger.log(
           `Processing user callback: ${data} for telegramId: ${telegramId}`,
@@ -45,14 +78,12 @@ export class UserCallbackHandler {
         if (data.startsWith('category_')) {
           const categoryId = parseInt(data.split('_')[1]);
           const products = await this.productService.findByCategory(categoryId);
-          const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map(
-            (prod) => [
-              {
-                text: `${language === 'fa' ? prod.name : prod.nameJP || prod.name} - ${prod.price} تومان`,
-                callback_data: `product_${prod.id}`,
-              },
-            ],
-          );
+          const keyboard: any[][] = products.map((prod) => [
+            {
+              text: `${language === 'fa' ? prod.name : prod.nameJP || prod.name} - ${prod.price} تومان`,
+              callback_data: `product_${prod.id}`,
+            },
+          ]);
           const message = language === 'fa' ? '📦 محصولات:' : '📦 Products:';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
@@ -118,112 +149,32 @@ export class UserCallbackHandler {
               resize_keyboard: true,
             },
           });
-          bot.once('location', async (msg) => {
-            try {
-              const detailsMessage =
-                language === 'fa'
-                  ? '🏠 لطفاً شماره واحد، طبقه یا اطلاعات تکمیلی را وارد کنید (مثلاً: واحد 12، طبقه 3):'
-                  : '🏠 Please provide apartment number, floor or additional details (e.g.: apartment 12, floor 3):';
-              await this.telegramService.sendMessage(chatId, detailsMessage, {
-                reply_markup: { force_reply: true },
-              });
-              bot.once('message', async (msgDetails) => {
-                try {
-                  const delivery = await this.deliveryService.create({
-                    orderId: order.id,
-                    latitude: msg.location.latitude,
-                    longitude: msg.location.longitude,
-                    addressDetails: msgDetails.text,
-                  });
-                  const items = order.orderItems
-                    ?.map(
-                      (item) =>
-                        `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
-                    )
-                    .join(', ');
-                  const message =
-                    language === 'fa'
-                      ? `💳 سفارش ایجاد شد! لطفاً از طریق لینک زیر پرداخت را انجام دهید.\n` +
-                        `  📋 شناسه: ${order.id}\n` +
-                        `  👤 کاربر: ${order.user?.fullName || 'وارد نشده'}\n` +
-                        `  📦 محصولات: ${items || 'N/A'}\n` +
-                        `  💸 جمع کل: ${order.totalAmount} تومان\n` +
-                        `  📍 آدرس: (${delivery.latitude}, ${delivery.longitude})\n` +
-                        `  🏠 جزئیات: ${delivery.addressDetails || 'N/A'}\n` +
-                        `━━━━━━━━━━━━━━━`
-                      : `💳 Order created! Please pay via the following link.\n` +
-                        `  📋 ID: ${order.id}\n` +
-                        `  👤 User: ${order.user?.fullName || 'Not specified'}\n` +
-                        `  📦 Products: ${items || 'N/A'}\n` +
-                        `  💸 Total: ${order.totalAmount} sum\n` +
-                        `  📍 Address: (${delivery.latitude}, ${delivery.longitude})\n` +
-                        `  🏠 Details: ${delivery.addressDetails || 'N/A'}\n` +
-                        `━━━━━━━━━━━━━━━`;
-                  await this.telegramService.sendMessage(chatId, message, {
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                      inline_keyboard: [
-                        [
-                          {
-                            text:
-                              language === 'fa'
-                                ? '💵 پرداخت از طریق Click'
-                                : '💵 Pay via Click',
-                            callback_data: `confirm_payment_${order.id}_click`,
-                          },
-                        ],
-                        [
-                          {
-                            text:
-                              language === 'fa'
-                                ? '💵 پرداخت از طریق Payme'
-                                : '💵 Pay via Payme',
-                            callback_data: `confirm_payment_${order.id}_payme`,
-                          },
-                        ],
-                      ],
-                    },
-                  });
-                } catch (error) {
-                  this.logger.error(`Error in delivery: ${error.message}`);
-                  const errorMessage =
-                    language === 'fa'
-                      ? '❌ خطا در ذخیره اطلاعات تحویل رخ داد.'
-                      : '❌ Error occurred while saving delivery data.';
-                  await this.telegramService.sendMessage(
-                    chatId,
-                    errorMessage,
-                    {},
-                  );
-                }
-              });
-            } catch (error) {
-              this.logger.error(`Error in delivery: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در ذخیره آدرس تحویل رخ داد.'
-                  : '❌ Error occurred while saving delivery address.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
+          this.userStates.set(telegramId, {
+            action: 'place_order',
+            orderId: order.id,
+            language,
           });
         } else if (data.startsWith('confirm_payment_')) {
           const parts = data.split('_');
           const orderId = parseInt(parts[2], 10);
-          const paymentType = parts[3];
+          const paymentTypeRaw = parts[3];
 
           this.logger.log(
-            `Confirming payment for orderId: ${orderId}, paymentType: ${paymentType}`,
+            `Confirming payment for orderId: ${orderId}, paymentType: ${paymentTypeRaw}`,
           );
 
-          if (![PAYMENT_TYPE.CLICK, PAYMENT_TYPE.CARD].includes(paymentType)) {
-            this.logger.error(`Invalid payment type: ${paymentType}`);
+          // Validate and cast the payment type
+          if (paymentTypeRaw !== 'click' && paymentTypeRaw !== 'card') {
+            this.logger.error(`Invalid payment type: ${paymentTypeRaw}`);
             const errorMessage =
               language === 'fa'
                 ? '❌ نوع پرداخت نامعتبر است.'
                 : '❌ Invalid payment type.';
             await this.telegramService.sendMessage(chatId, errorMessage, {});
+            await ctx.answerCbQuery();
             return;
           }
+          const paymentType: 'click' | 'card' = paymentTypeRaw;
 
           const order = await this.orderService.findOne(orderId);
           if (!order) {
@@ -231,6 +182,7 @@ export class UserCallbackHandler {
             const errorMessage =
               language === 'fa' ? '❌ سفارش یافت نشد.' : '❌ Order not found.';
             await this.telegramService.sendMessage(chatId, errorMessage, {});
+            await ctx.answerCbQuery();
             return;
           }
 
@@ -244,6 +196,7 @@ export class UserCallbackHandler {
                 ? '❌ اطلاعات تحویل یافت نشد.'
                 : '❌ Delivery data not found.';
             await this.telegramService.sendMessage(chatId, errorMessage, {});
+            await ctx.answerCbQuery();
             return;
           }
 
@@ -322,31 +275,11 @@ export class UserCallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msg) => {
-            try {
-              await this.feedbackService.create({
-                telegramId,
-                productId: parseInt(productId),
-                rating: parseInt(rating),
-                comment: msg.text,
-              });
-              const successMessage =
-                language === 'fa'
-                  ? '✅ بازخورد دریافت شد!'
-                  : '✅ Feedback received!';
-              await this.telegramService.sendMessage(
-                chatId,
-                successMessage,
-                {},
-              );
-            } catch (error) {
-              this.logger.error(`Error in feedback: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در ثبت بازخورد رخ داد.'
-                  : '❌ Error occurred while submitting feedback.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
+          this.userStates.set(telegramId, {
+            action: 'rate_product',
+            productId: parseInt(productId),
+            rating: parseInt(rating),
+            language,
           });
         } else if (data === 'clear_cart') {
           await this.cartService.clearCart(telegramId);
@@ -360,7 +293,7 @@ export class UserCallbackHandler {
             page,
             10,
           );
-          const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
+          const keyboard: any[][] = [];
           if (orders.length === 10) {
             keyboard.push([
               {
@@ -397,11 +330,141 @@ export class UserCallbackHandler {
         await this.telegramService.sendMessage(chatId, message, {});
       } finally {
         try {
-          await bot.answerCallbackQuery(query.id);
+          await ctx.answerCbQuery();
         } catch (err) {
           this.logger.error(`Error in answerCallbackQuery: ${err.message}`);
         }
       }
     });
+  }
+
+  private async handleLocation(ctx: any, telegramId: string, state: any) {
+    const chatId = ctx.chat.id;
+    const language = state.language || 'fa';
+
+    try {
+      const location = ctx.message.location;
+      state.latitude = location.latitude;
+      state.longitude = location.longitude;
+
+      const detailsMessage =
+        language === 'fa'
+          ? '🏠 لطفاً شماره واحد، طبقه یا اطلاعات تکمیلی را وارد کنید (مثلاً: واحد 12، طبقه 3):'
+          : '🏠 Please provide apartment number, floor or additional details (e.g.: apartment 12, floor 3):';
+      await this.telegramService.sendMessage(chatId, detailsMessage, {
+        reply_markup: { force_reply: true },
+      });
+
+      state.action = 'delivery_details';
+      this.userStates.set(telegramId, state);
+    } catch (error) {
+      this.logger.error(`Error in location handler: ${error.message}`);
+      const errorMessage =
+        language === 'fa'
+          ? '❌ خطا در ذخیره آدرس تحویل رخ داد.'
+          : '❌ Error occurred while saving delivery address.';
+      await this.telegramService.sendMessage(chatId, errorMessage, {});
+      this.userStates.delete(telegramId);
+    }
+  }
+
+  private async handleUserState(
+    ctx: any,
+    telegramId: string,
+    chatId: number,
+    text: string,
+    state: any,
+  ) {
+    const language = state.language || 'fa';
+
+    if (state.action === 'delivery_details') {
+      try {
+        const order = await this.orderService.findOne(state.orderId);
+        const delivery = await this.deliveryService.create({
+          orderId: order.id,
+          latitude: state.latitude,
+          longitude: state.longitude,
+          addressDetails: text,
+        });
+
+        const items = order.orderItems
+          ?.map(
+            (item) =>
+              `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+          )
+          .join(', ');
+        const message =
+          language === 'fa'
+            ? `💳 سفارش ایجاد شد! لطفاً از طریق لینک زیر پرداخت را انجام دهید.\n` +
+              `  📋 شناسه: ${order.id}\n` +
+              `  👤 کاربر: ${order.user?.fullName || 'وارد نشده'}\n` +
+              `  📦 محصولات: ${items || 'N/A'}\n` +
+              `  💸 جمع کل: ${order.totalAmount} تومان\n` +
+              `  📍 آدرس: (${delivery.latitude}, ${delivery.longitude})\n` +
+              `  🏠 جزئیات: ${delivery.addressDetails || 'N/A'}\n` +
+              `━━━━━━━━━━━━━━━`
+            : `💳 Order created! Please pay via the following link.\n` +
+              `  📋 ID: ${order.id}\n` +
+              `  👤 User: ${order.user?.fullName || 'Not specified'}\n` +
+              `  📦 Products: ${items || 'N/A'}\n` +
+              `  💸 Total: ${order.totalAmount} sum\n` +
+              `  📍 Address: (${delivery.latitude}, ${delivery.longitude})\n` +
+              `  🏠 Details: ${delivery.addressDetails || 'N/A'}\n` +
+              `━━━━━━━━━━━━━━━`;
+        await this.telegramService.sendMessage(chatId, message, {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text:
+                    language === 'fa'
+                      ? '💵 پرداخت از طریق Click'
+                      : '💵 Pay via Click',
+                  callback_data: `confirm_payment_${order.id}_click`,
+                },
+              ],
+              [
+                {
+                  text:
+                    language === 'fa'
+                      ? '💵 پرداخت از طریق Payme'
+                      : '💵 Pay via Payme',
+                  callback_data: `confirm_payment_${order.id}_payme`,
+                },
+              ],
+            ],
+          },
+        });
+      } catch (error) {
+        this.logger.error(`Error in delivery: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در ذخیره اطلاعات تحویل رخ داد.'
+            : '❌ Error occurred while saving delivery data.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    } else if (state.action === 'rate_product') {
+      try {
+        await this.feedbackService.create({
+          telegramId,
+          productId: state.productId,
+          rating: state.rating,
+          comment: text,
+        });
+        const successMessage =
+          language === 'fa' ? '✅ بازخورد دریافت شد!' : '✅ Feedback received!';
+        await this.telegramService.sendMessage(chatId, successMessage, {});
+      } catch (error) {
+        this.logger.error(`Error in feedback: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در ثبت بازخورد رخ داد.'
+            : '❌ Error occurred while submitting feedback.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    }
   }
 }

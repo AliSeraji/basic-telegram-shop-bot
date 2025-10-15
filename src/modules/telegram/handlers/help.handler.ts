@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Telegraf } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { TelegramService } from '../telegram.service';
 import { UserService } from '../../user/user.service';
@@ -16,21 +16,21 @@ export class HelpHandler {
 
   handle() {
     const bot = this.telegramService.getBotInstance();
-    const adminTelegramId = '5661241603';
-    const adminTelegramUser = 'Vali_003';
+    const adminTelegramId = process.env.ADMIN_TELEGRAM_ID;
+    const adminTelegramUser = process.env.ADMIN_TELEGRAM_USERNAME;
 
     if (!adminTelegramId || !adminTelegramUser) {
       this.logger.error(
-        'ADMIN_TELEGRAM_ID or ADMIN_TELEGRAM_USER is not defined in .env file',
+        'ADMIN_TELEGRAM_ID or ADMIN_TELEGRAM_USERNAME is not defined in .env file',
       );
       throw new Error(
-        'ADMIN_TELEGRAM_ID or ADMIN_TELEGRAM_USER is not defined',
+        'ADMIN_TELEGRAM_ID or ADMIN_TELEGRAM_USERNAME is not defined',
       );
     }
 
-    bot.onText(/🆘 (راهنما|Help)/, async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = msg.from.id.toString();
+    bot.hears(/🆘 (راهنما|Help)/, async (ctx) => {
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
       try {
         const user = await this.userService.findByTelegramId(telegramId);
         const language = user.language || 'fa';
@@ -42,8 +42,18 @@ export class HelpHandler {
         await this.telegramService.sendMessage(chatId, message, {
           reply_markup: { force_reply: true },
         });
-        bot.once('message', async (replyMsg) => {
-          const replyText = replyMsg.text;
+
+        // Store a flag to listen for next message from this user
+        bot.on('text', async (replyCtx) => {
+          // Only process if it's from the same user and same chat
+          if (
+            replyCtx.from.id !== ctx.from.id ||
+            replyCtx.chat.id !== ctx.chat.id
+          ) {
+            return;
+          }
+
+          const replyText = replyCtx.message.text;
           if (!replyText) {
             this.logger.log(
               `Ignoring empty help message from telegramId: ${telegramId}`,
@@ -62,8 +72,8 @@ export class HelpHandler {
             );
             const adminMessage =
               language === 'fa'
-                ? `درخواست کمک:\nکاربر: ${replyMsg.from.id} (@${replyMsg.from.username || 'N/A'})\nپیام: ${replyText}`
-                : `Help request:\nUser: ${replyMsg.from.id} (@${replyMsg.from.username || 'N/A'})\nMessage: ${replyText}`;
+                ? `درخواست کمک:\nکاربر: ${replyCtx.from.id} (@${replyCtx.from.username || 'N/A'})\nپیام: ${replyText}`
+                : `Help request:\nUser: ${replyCtx.from.id} (@${replyCtx.from.username || 'N/A'})\nMessage: ${replyText}`;
             await this.telegramService.sendMessage(
               adminTelegramId,
               adminMessage,
@@ -77,10 +87,10 @@ export class HelpHandler {
             this.logger.error(`Error sending help to admin: ${error.message}`);
             const errorMessage =
               language === 'fa'
-                ? error.response?.body?.error_code === 403
+                ? error.response?.error_code === 403
                   ? `خطا در ارسال پیام: مدیر (@${adminTelegramUser}) چت را با ربات شروع نکرده است. لطفاً به @${adminTelegramUser} پیام دهید.`
                   : `خطا در ارسال پیام: ${error.message}. لطفاً به @${adminTelegramUser} پیام دهید.`
-                : error.response?.body?.error_code === 403
+                : error.response?.error_code === 403
                   ? `Sending error: Admin (@${adminTelegramUser}) has not started a chat with the bot. Please write to @${adminTelegramUser}.`
                   : `Sending error: ${error.message}. Please write to @${adminTelegramUser}.`;
             await this.telegramService.sendMessage(chatId, errorMessage);

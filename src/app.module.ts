@@ -34,7 +34,7 @@ import { DeliveryModule } from './modules/delivery/delivery.module';
         password: config.get<string>('DATABASE_PASSWORD'),
         database: config.get<string>('DATABASE_NAME'),
         autoLoadEntities: true,
-        synchronize: false,
+        synchronize: true,
       }),
     }),
     UserModule,

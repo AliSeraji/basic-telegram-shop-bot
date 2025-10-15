@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Telegraf } from 'telegraf';
 import { UserService } from '../../user/user.service';
 import { TelegramService } from '../telegram.service';
 import { getAdminKeyboard } from '../utils/keyboards';
@@ -15,9 +15,9 @@ export class AdminHandler {
 
   handle() {
     const bot = this.telegramService.getBotInstance();
-    bot.onText(/\/admin/, async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = msg.from.id.toString();
+    bot.command('admin', async (ctx) => {
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
       try {
         const user = await this.userService.findByTelegramId(telegramId);
         const language = user.language || 'fa';

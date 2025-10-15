@@ -1,6 +1,6 @@
 import { Controller, Post, Body, HttpCode } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Update } from 'telegraf/typings/core/types/typegram';
 
 @Controller('telegram')
 export class TelegramController {
@@ -8,7 +8,7 @@ export class TelegramController {
 
   @Post('webhook')
   @HttpCode(200)
-  async handleWebhook(@Body() update: TelegramBot.Update) {
+  async handleWebhook(@Body() update: Update) {
     await this.telegramService.handleWebhookUpdate(update);
     return {};
   }

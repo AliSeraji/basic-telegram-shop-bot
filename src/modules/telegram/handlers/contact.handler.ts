@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Telegraf } from 'telegraf';
 import { TelegramService } from '../telegram.service';
 import { UserService } from '../../user/user.service';
 import { getMainKeyboard } from '../utils/keyboards';
@@ -16,16 +16,21 @@ export class ContactHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
 
-    bot.on('contact', async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = msg.from.id.toString();
+    bot.on('contact', async (ctx) => {
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
 
       try {
         const user = await this.userService.findByTelegramId(telegramId);
         const language = user.language || 'fa';
 
-        if (!msg.contact || msg.contact.user_id !== msg.from.id) {
-          this.logger.warn(`مخاطب نامعتبر: ${JSON.stringify(msg.contact)}`);
+        if (
+          !ctx.message.contact ||
+          ctx.message.contact.user_id !== ctx.from.id
+        ) {
+          this.logger.warn(
+            `مخاطب نامعتبر: ${JSON.stringify(ctx.message.contact)}`,
+          );
           const message =
             language === 'fa'
               ? 'شما فقط می‌توانید شماره تلفن خود را به اشتراک بگذارید. لطفاً دکمه "ارسال شماره تلفن" را فشار دهید.'
@@ -36,7 +41,7 @@ export class ContactHandler {
           return;
         }
 
-        const phone = msg.contact.phone_number;
+        const phone = ctx.message.contact.phone_number;
 
         this.logger.log(
           `شماره تلفن دریافت شد: ${phone} telegramId: ${telegramId}`,

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Telegraf } from 'telegraf';
 import { CategoryService } from '../../category/category.service';
 import { ProductService } from '../../product/product.service';
 import { UserService } from '../../user/user.service';
@@ -22,6 +22,8 @@ import { getAdminKeyboard } from '../utils/keyboards';
 @Injectable()
 export class CallbackHandler {
   private logger = new Logger(CallbackHandler.name);
+  // Store user states for conversation flows
+  private userStates = new Map<string, any>();
 
   constructor(
     private categoryService: CategoryService,
@@ -36,10 +38,31 @@ export class CallbackHandler {
 
   handle() {
     const bot = this.telegramService.getBotInstance();
-    bot.on('callback_query', async (query) => {
-      const chatId = query.message.chat.id;
-      const telegramId = query.from.id.toString();
-      const data = query.data;
+
+    // Handle text messages for conversation states
+    bot.on('text', async (ctx) => {
+      const telegramId = ctx.from.id.toString();
+      const state = this.userStates.get(telegramId);
+
+      if (!state) return; // No active state, ignore
+
+      const chatId = ctx.chat.id;
+      const text = ctx.message.text;
+
+      try {
+        await this.handleUserState(ctx, telegramId, chatId, text, state);
+      } catch (error) {
+        this.logger.error(`Error handling user state: ${error.message}`);
+        this.userStates.delete(telegramId);
+      }
+    });
+
+    bot.on('callback_query', async (ctx) => {
+      if (!ctx.chat || !ctx.from || !ctx.callbackQuery) return;
+      const query = ctx.callbackQuery;
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
+      const data = 'data' in query ? query.data : '';
       let language = 'fa';
 
       try {
@@ -63,6 +86,7 @@ export class CallbackHandler {
                 ? '❌ این عملیات فقط برای مدیران قابل دسترسی است.'
                 : '❌ This action is only available to administrators.';
             await this.telegramService.sendMessage(chatId, message, {});
+            await ctx.answerCbQuery();
             return;
           }
         }
@@ -75,68 +99,10 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msgName) => {
-            const name = msgName.text;
-            const messageRu =
-              language === 'fa'
-                ? '📋 نام دسته‌بندی را وارد کنید (به انگلیسی):'
-                : '📋 Enter category name (in English):';
-            await this.telegramService.sendMessage(chatId, messageRu, {
-              reply_markup: { force_reply: true },
-            });
-            bot.once('message', async (msgNameRu) => {
-              const nameRu = msgNameRu.text;
-              const descMessage =
-                language === 'fa'
-                  ? '📝 توضیحات دسته‌بندی را وارد کنید (به فارسی):'
-                  : '📝 Enter category description (in Persian):';
-              await this.telegramService.sendMessage(chatId, descMessage, {
-                reply_markup: { force_reply: true },
-              });
-              bot.once('message', async (msgDesc) => {
-                const descMessageRu =
-                  language === 'fa'
-                    ? '📝 توضیحات دسته‌بندی را وارد کنید (به انگلیسی، اختیاری):'
-                    : '📝 Enter category description (in English, optional):';
-                await this.telegramService.sendMessage(chatId, descMessageRu, {
-                  reply_markup: { force_reply: true },
-                });
-                bot.once('message', async (msgDescRu) => {
-                  try {
-                    await this.categoryService.create({
-                      name: name.trim(),
-                      nameFa: nameRu.trim(),
-                      description: msgDesc.text.trim(),
-                      descriptionFa: msgDescRu.text.trim() || null,
-                    });
-                    const successMessage =
-                      language === 'fa'
-                        ? '✅ دسته‌بندی اضافه شد!'
-                        : '✅ Category added!';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      successMessage,
-                      {
-                        reply_markup: getAdminKeyboard(language),
-                      },
-                    );
-                  } catch (error) {
-                    this.logger.error(
-                      `Error in add_category: ${error.message}`,
-                    );
-                    const errorMessage =
-                      language === 'fa'
-                        ? '❌ خطا در افزودن دسته‌بندی رخ داد.'
-                        : '❌ Error occurred while adding category.';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      errorMessage,
-                      {},
-                    );
-                  }
-                });
-              });
-            });
+          this.userStates.set(telegramId, {
+            action: 'add_category',
+            step: 1,
+            language,
           });
         } else if (data === 'view_categories') {
           const categories = await this.categoryService.findAll();
@@ -172,68 +138,11 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msgName) => {
-            const name = msgName.text;
-            const messageRu =
-              language === 'fa'
-                ? '📋 نام جدید دسته‌بندی را وارد کنید (به انگلیسی):'
-                : '📋 Enter new category name (in English):';
-            await this.telegramService.sendMessage(chatId, messageRu, {
-              reply_markup: { force_reply: true },
-            });
-            bot.once('message', async (msgNameRu) => {
-              const nameRu = msgNameRu.text;
-              const descMessage =
-                language === 'fa'
-                  ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به فارسی):'
-                  : '📝 Enter new category description (in Persian):';
-              await this.telegramService.sendMessage(chatId, descMessage, {
-                reply_markup: { force_reply: true },
-              });
-              bot.once('message', async (msgDesc) => {
-                const descMessageRu =
-                  language === 'fa'
-                    ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به انگلیسی، اختیاری):'
-                    : '📝 Enter new category description (in English, optional):';
-                await this.telegramService.sendMessage(chatId, descMessageRu, {
-                  reply_markup: { force_reply: true },
-                });
-                bot.once('message', async (msgDescRu) => {
-                  try {
-                    await this.categoryService.update(categoryId, {
-                      name: name.trim(),
-                      nameFa: nameRu.trim(),
-                      description: msgDesc.text.trim(),
-                      descriptionFa: msgDescRu.text.trim() || null,
-                    });
-                    const successMessage =
-                      language === 'fa'
-                        ? '✅ دسته‌بندی به‌روزرسانی شد!'
-                        : '✅ Category updated!';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      successMessage,
-                      {
-                        reply_markup: getAdminKeyboard(language),
-                      },
-                    );
-                  } catch (error) {
-                    this.logger.error(
-                      `Error in edit_category: ${error.message}`,
-                    );
-                    const errorMessage =
-                      language === 'fa'
-                        ? '❌ خطا در ویرایش دسته‌بندی رخ داد.'
-                        : '❌ Error occurred while editing category.';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      errorMessage,
-                      {},
-                    );
-                  }
-                });
-              });
-            });
+          this.userStates.set(telegramId, {
+            action: 'edit_category',
+            step: 1,
+            categoryId,
+            language,
           });
         } else if (data === 'delete_category') {
           const categories = await this.categoryService.findAll();
@@ -267,91 +176,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-
-          bot.once('message', async (msg) => {
-            try {
-              const parts = msg.text.split(';');
-              if (parts.length < 8) {
-                const errorMessage =
-                  language === 'fa'
-                    ? '❌ اطلاعات ناقص است. لطفاً 8 فیلد را وارد کنید.'
-                    : '❌ Insufficient data. Please enter all 8 fields.';
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-
-              const [
-                name,
-                nameRu,
-                price,
-                description,
-                descriptionRu,
-                imageUrl,
-                categoryId,
-                stock,
-              ] = parts;
-
-              const parsedCategoryId = parseInt(categoryId.trim());
-              const parsedStock = parseInt(stock.trim());
-
-              if (isNaN(parsedCategoryId) || isNaN(parsedStock)) {
-                const errorMessage =
-                  language === 'fa'
-                    ? '❌ شناسه دسته‌بندی یا موجودی انبار نامعتبر است.'
-                    : '❌ Invalid category ID or stock quantity.';
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-
-              const category =
-                await this.categoryService.findOne(parsedCategoryId);
-              if (!category) {
-                const errorMessage =
-                  language === 'fa'
-                    ? `❌ دسته‌بندی با شناسه ${parsedCategoryId} یافت نشد.`
-                    : `❌ Category with ID ${parsedCategoryId} not found.`;
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-
-              await this.productService.create({
-                name: name.trim(),
-                nameRu: nameRu.trim(),
-                price: parseFloat(price.trim()),
-                description: description.trim(),
-                descriptionRu: descriptionRu.trim() || null,
-                imageUrl: imageUrl.trim(),
-                categoryId: parsedCategoryId,
-                stock: parsedStock,
-                isActive: true,
-              });
-
-              const successMessage =
-                language === 'fa' ? '✅ محصول اضافه شد.' : '✅ Product added.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in add_product: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در افزودن محصول رخ داد.'
-                  : '❌ Error occurred while adding product.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
-          });
+          this.userStates.set(telegramId, { action: 'add_product', language });
         } else if (data === 'view_products') {
           const products = await this.productService.findAll();
           await this.telegramService.sendMessage(
@@ -386,71 +211,10 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msg) => {
-            try {
-              const [
-                name,
-                nameRu,
-                price,
-                description,
-                descriptionRu,
-                imageUrl,
-                categoryId,
-                stock,
-              ] = msg.text.split(';');
-              const parsedCategoryId = parseInt(categoryId.trim());
-              const parsedStock = parseInt(stock.trim());
-              if (isNaN(parsedCategoryId) || isNaN(parsedStock)) {
-                const errorMessage =
-                  language === 'fa'
-                    ? '❌ شناسه دسته‌بندی یا موجودی انبار نامعتبر است.'
-                    : '❌ Invalid category ID or stock quantity.';
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-              const category =
-                await this.categoryService.findOne(parsedCategoryId);
-              if (!category) {
-                const errorMessage =
-                  language === 'fa'
-                    ? `❌ دسته‌بندی با شناسه ${parsedCategoryId} یافت نشد.`
-                    : `❌ Category with ID ${parsedCategoryId} not found.`;
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-              await this.productService.update(productId, {
-                name: name.trim(),
-                nameRu: nameRu.trim(),
-                price: parseFloat(price.trim()),
-                description: description.trim(),
-                descriptionRu: descriptionRu.trim() || null,
-                imageUrl: imageUrl.trim(),
-                categoryId: parsedCategoryId,
-                stock: parsedStock,
-              });
-              const successMessage =
-                language === 'fa'
-                  ? '✅ محصول به‌روزرسانی شد.'
-                  : '✅ Product updated.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in edit_product: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در ویرایش محصول رخ داد.'
-                  : '❌ Error occurred while editing product.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
+          this.userStates.set(telegramId, {
+            action: 'edit_product',
+            productId,
+            language,
           });
         } else if (data === 'delete_product') {
           const products = await this.productService.findAll();
@@ -511,29 +275,10 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msg) => {
-            try {
-              const [fullName, phone, address] = msg.text.split(';');
-              await this.userService.update(userId, {
-                fullName: fullName.trim(),
-                phone: phone.trim(),
-                userAddress: address.trim(),
-              });
-              const successMessage =
-                language === 'fa'
-                  ? '✅ اطلاعات کاربر به‌روزرسانی شد.'
-                  : '✅ User data updated.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in edit_user: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در ویرایش کاربر رخ داد.'
-                  : '❌ Error occurred while editing user.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
+          this.userStates.set(telegramId, {
+            action: 'edit_user',
+            userId,
+            language,
           });
         } else if (data === 'delete_user') {
           const users = await this.userService.findAll();
@@ -584,7 +329,7 @@ export class CallbackHandler {
         } else if (data.startsWith('view_orders_')) {
           const page = parseInt(data.split('_')[2]) || 1;
           const orders = await this.orderService.findAll(page, 10);
-          const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
+          const keyboard: any[][] = [];
           if (orders.length === 10) {
             keyboard.push([
               {
@@ -633,7 +378,7 @@ export class CallbackHandler {
         } else if (data.startsWith('view_deliveries_')) {
           const page = parseInt(data.split('_')[2]) || 1;
           const deliveries = await this.deliveryService.findAll(page, 10);
-          const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
+          const keyboard: any[][] = [];
           if (deliveries.length === 10) {
             keyboard.push([
               {
@@ -682,26 +427,10 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msg) => {
-            try {
-              await this.deliveryService.update(deliveryId, {
-                status: msg.text,
-              });
-              const successMessage =
-                language === 'fa'
-                  ? '✅ وضعیت تحویل به‌روزرسانی شد.'
-                  : '✅ Delivery status updated.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in edit_delivery: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در به‌روزرسانی وضعیت تحویل رخ داد.'
-                  : '❌ Error occurred while updating delivery status.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
+          this.userStates.set(telegramId, {
+            action: 'edit_delivery',
+            deliveryId,
+            language,
           });
         } else if (data === 'view_feedback') {
           const feedbacks = await this.feedbackService.findAll();
@@ -744,29 +473,9 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
-          bot.once('message', async (msg) => {
-            try {
-              const [code, discountPercent, validTill] = msg.text.split(';');
-              await this.promocodeService.create({
-                code: code.trim(),
-                discountPercent: parseFloat(discountPercent.trim()),
-                validTill: new Date(validTill.trim()),
-              });
-              const successMessage =
-                language === 'fa'
-                  ? '✅ کد تخفیف اضافه شد.'
-                  : '✅ Promo code added.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in create_promocode: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در افزودن کد تخفیف رخ داد.'
-                  : '❌ Error occurred while adding promo code.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
+          this.userStates.set(telegramId, {
+            action: 'create_promocode',
+            language,
           });
         } else if (data === 'view_stats') {
           const stats = await this.orderService.getStats();
@@ -815,11 +524,362 @@ export class CallbackHandler {
         await this.telegramService.sendMessage(chatId, message, {});
       } finally {
         try {
-          await bot.answerCallbackQuery(query.id);
+          await ctx.answerCbQuery();
         } catch (err) {
           this.logger.error(`Error in answerCallbackQuery: ${err.message}`);
         }
       }
     });
+  }
+
+  private async handleUserState(
+    ctx: any,
+    telegramId: string,
+    chatId: number,
+    text: string,
+    state: any,
+  ) {
+    const language = state.language || 'fa';
+
+    if (state.action === 'add_category') {
+      if (state.step === 1) {
+        state.name = text.trim();
+        state.step = 2;
+        const message =
+          language === 'fa'
+            ? '📋 نام دسته‌بندی را وارد کنید (به انگلیسی):'
+            : '📋 Enter category name (in English):';
+        await this.telegramService.sendMessage(chatId, message, {
+          reply_markup: { force_reply: true },
+        });
+      } else if (state.step === 2) {
+        state.nameFa = text.trim();
+        state.step = 3;
+        const message =
+          language === 'fa'
+            ? '📝 توضیحات دسته‌بندی را وارد کنید (به فارسی):'
+            : '📝 Enter category description (in Persian):';
+        await this.telegramService.sendMessage(chatId, message, {
+          reply_markup: { force_reply: true },
+        });
+      } else if (state.step === 3) {
+        state.description = text.trim();
+        state.step = 4;
+        const message =
+          language === 'fa'
+            ? '📝 توضیحات دسته‌بندی را وارد کنید (به انگلیسی، اختیاری):'
+            : '📝 Enter category description (in English, optional):';
+        await this.telegramService.sendMessage(chatId, message, {
+          reply_markup: { force_reply: true },
+        });
+      } else if (state.step === 4) {
+        try {
+          await this.categoryService.create({
+            name: state.name,
+            nameFa: state.nameFa,
+            description: state.description,
+            descriptionFa: text.trim() || '',
+          });
+          const successMessage =
+            language === 'fa' ? '✅ دسته‌بندی اضافه شد!' : '✅ Category added!';
+          await this.telegramService.sendMessage(chatId, successMessage, {
+            reply_markup: getAdminKeyboard(language),
+          });
+        } catch (error) {
+          this.logger.error(`Error in add_category: ${error.message}`);
+          const errorMessage =
+            language === 'fa'
+              ? '❌ خطا در افزودن دسته‌بندی رخ داد.'
+              : '❌ Error occurred while adding category.';
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+        }
+        this.userStates.delete(telegramId);
+      }
+    } else if (state.action === 'edit_category') {
+      // Similar pattern for edit_category
+      if (state.step === 1) {
+        state.name = text.trim();
+        state.step = 2;
+        const message =
+          language === 'fa'
+            ? '📋 نام جدید دسته‌بندی را وارد کنید (به انگلیسی):'
+            : '📋 Enter new category name (in English):';
+        await this.telegramService.sendMessage(chatId, message, {
+          reply_markup: { force_reply: true },
+        });
+      } else if (state.step === 2) {
+        state.nameFa = text.trim();
+        state.step = 3;
+        const message =
+          language === 'fa'
+            ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به فارسی):'
+            : '📝 Enter new category description (in Persian):';
+        await this.telegramService.sendMessage(chatId, message, {
+          reply_markup: { force_reply: true },
+        });
+      } else if (state.step === 3) {
+        state.description = text.trim();
+        state.step = 4;
+        const message =
+          language === 'fa'
+            ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به انگلیسی، اختیاری):'
+            : '📝 Enter new category description (in English, optional):';
+        await this.telegramService.sendMessage(chatId, message, {
+          reply_markup: { force_reply: true },
+        });
+      } else if (state.step === 4) {
+        try {
+          await this.categoryService.update(state.categoryId, {
+            name: state.name,
+            nameFa: state.nameFa,
+            description: state.description,
+            descriptionFa: text.trim(),
+          });
+          const successMessage =
+            language === 'fa'
+              ? '✅ دسته‌بندی به‌روزرسانی شد!'
+              : '✅ Category updated!';
+          await this.telegramService.sendMessage(chatId, successMessage, {
+            reply_markup: getAdminKeyboard(language),
+          });
+        } catch (error) {
+          this.logger.error(`Error in edit_category: ${error.message}`);
+          const errorMessage =
+            language === 'fa'
+              ? '❌ خطا در ویرایش دسته‌بندی رخ داد.'
+              : '❌ Error occurred while editing category.';
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+        }
+        this.userStates.delete(telegramId);
+      }
+    } else if (state.action === 'add_product') {
+      try {
+        const parts = text.split(';');
+        if (parts.length < 8) {
+          const errorMessage =
+            language === 'fa'
+              ? '❌ اطلاعات ناقص است. لطفاً 8 فیلد را وارد کنید.'
+              : '❌ Insufficient data. Please enter all 8 fields.';
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+          this.userStates.delete(telegramId);
+          return;
+        }
+
+        const [
+          name,
+          nameRu,
+          price,
+          description,
+          descriptionRu,
+          imageUrl,
+          categoryId,
+          stock,
+        ] = parts;
+        const parsedCategoryId = parseInt(categoryId.trim());
+        const parsedStock = parseInt(stock.trim());
+
+        if (isNaN(parsedCategoryId) || isNaN(parsedStock)) {
+          const errorMessage =
+            language === 'fa'
+              ? '❌ شناسه دسته‌بندی یا موجودی انبار نامعتبر است.'
+              : '❌ Invalid category ID or stock quantity.';
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+          this.userStates.delete(telegramId);
+          return;
+        }
+
+        const category = await this.categoryService.findOne(parsedCategoryId);
+        if (!category) {
+          const errorMessage =
+            language === 'fa'
+              ? `❌ دسته‌بندی با شناسه ${parsedCategoryId} یافت نشد.`
+              : `❌ Category with ID ${parsedCategoryId} not found.`;
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+          this.userStates.delete(telegramId);
+          return;
+        }
+
+        await this.productService.create({
+          name: name.trim(),
+          nameRu: nameRu.trim(),
+          price: parseFloat(price.trim()),
+          description: description.trim(),
+          descriptionRu: descriptionRu.trim() || '',
+          imageUrl: imageUrl.trim(),
+          categoryId: parsedCategoryId,
+          stock: parsedStock,
+          isActive: true,
+        });
+
+        const successMessage =
+          language === 'fa' ? '✅ محصول اضافه شد.' : '✅ Product added.';
+        await this.telegramService.sendMessage(chatId, successMessage, {
+          reply_markup: getAdminKeyboard(language),
+        });
+      } catch (error) {
+        this.logger.error(`Error in add_product: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در افزودن محصول رخ داد.'
+            : '❌ Error occurred while adding product.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    } else if (state.action === 'edit_product') {
+      try {
+        const [
+          name,
+          nameRu,
+          price,
+          description,
+          descriptionRu,
+          imageUrl,
+          categoryId,
+          stock,
+        ] = text.split(';');
+        const parsedCategoryId = parseInt(categoryId.trim());
+        const parsedStock = parseInt(stock.trim());
+
+        if (isNaN(parsedCategoryId) || isNaN(parsedStock)) {
+          const errorMessage =
+            language === 'fa'
+              ? '❌ شناسه دسته‌بندی یا موجودی انبار نامعتبر است.'
+              : '❌ Invalid category ID or stock quantity.';
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+          this.userStates.delete(telegramId);
+          return;
+        }
+
+        const category = await this.categoryService.findOne(parsedCategoryId);
+        if (!category) {
+          const errorMessage =
+            language === 'fa'
+              ? `❌ دسته‌بندی با شناسه ${parsedCategoryId} یافت نشد.`
+              : `❌ Category with ID ${parsedCategoryId} not found.`;
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+          this.userStates.delete(telegramId);
+          return;
+        }
+
+        await this.productService.update(state.productId, {
+          name: name.trim(),
+          nameRu: nameRu.trim(),
+          price: parseFloat(price.trim()),
+          description: description.trim(),
+          descriptionRu: descriptionRu.trim() || '',
+          imageUrl: imageUrl.trim(),
+          categoryId: parsedCategoryId,
+          stock: parsedStock,
+        });
+
+        const successMessage =
+          language === 'fa'
+            ? '✅ محصول به‌روزرسانی شد.'
+            : '✅ Product updated.';
+        await this.telegramService.sendMessage(chatId, successMessage, {
+          reply_markup: getAdminKeyboard(language),
+        });
+      } catch (error) {
+        this.logger.error(`Error in edit_product: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در ویرایش محصول رخ داد.'
+            : '❌ Error occurred while editing product.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    } else if (state.action === 'edit_user') {
+      try {
+        const [fullName, phone, address] = text.split(';');
+        await this.userService.update(state.userId, {
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          userAddress: address.trim(),
+        });
+
+        const successMessage =
+          language === 'fa'
+            ? '✅ اطلاعات کاربر به‌روزرسانی شد.'
+            : '✅ User data updated.';
+        await this.telegramService.sendMessage(chatId, successMessage, {
+          reply_markup: getAdminKeyboard(language),
+        });
+      } catch (error) {
+        this.logger.error(`Error in edit_user: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در ویرایش کاربر رخ داد.'
+            : '❌ Error occurred while editing user.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    } else if (state.action === 'edit_delivery') {
+      try {
+        const validStatuses = [
+          'pending',
+          'in_transit',
+          'delivered',
+          'cancelled',
+        ];
+        const status = text.trim().toLowerCase();
+
+        if (!validStatuses.includes(status)) {
+          const errorMessage =
+            language === 'fa'
+              ? '❌ وضعیت نامعتبر است. لطفاً یکی از موارد زیر را وارد کنید: pending, in_transit, delivered, cancelled'
+              : '❌ Invalid status. Please enter one of: pending, in_transit, delivered, cancelled';
+          await this.telegramService.sendMessage(chatId, errorMessage, {});
+          this.userStates.delete(telegramId);
+          return;
+        }
+
+        await this.deliveryService.update(state.deliveryId, {
+          status: status as
+            | 'pending'
+            | 'in_transit'
+            | 'delivered'
+            | 'cancelled',
+        });
+
+        const successMessage =
+          language === 'fa'
+            ? '✅ وضعیت تحویل به‌روزرسانی شد.'
+            : '✅ Delivery status updated.';
+        await this.telegramService.sendMessage(chatId, successMessage, {
+          reply_markup: getAdminKeyboard(language),
+        });
+      } catch (error) {
+        this.logger.error(`Error in edit_delivery: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در به‌روزرسانی وضعیت تحویل رخ داد.'
+            : '❌ Error occurred while updating delivery status.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    } else if (state.action === 'create_promocode') {
+      try {
+        const [code, discountPercent, validTill] = text.split(';');
+        await this.promocodeService.create({
+          code: code.trim(),
+          discountPercent: parseFloat(discountPercent.trim()),
+          validTill: new Date(validTill.trim()),
+        });
+
+        const successMessage =
+          language === 'fa' ? '✅ کد تخفیف اضافه شد.' : '✅ Promo code added.';
+        await this.telegramService.sendMessage(chatId, successMessage, {
+          reply_markup: getAdminKeyboard(language),
+        });
+      } catch (error) {
+        this.logger.error(`Error in create_promocode: ${error.message}`);
+        const errorMessage =
+          language === 'fa'
+            ? '❌ خطا در افزودن کد تخفیف رخ داد.'
+            : '❌ Error occurred while adding promo code.';
+        await this.telegramService.sendMessage(chatId, errorMessage, {});
+      }
+      this.userStates.delete(telegramId);
+    }
   }
 }

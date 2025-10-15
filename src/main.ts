@@ -1,9 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
-
+import * as dns from 'dns';
 import * as crypto from 'crypto';
 import { AllExceptionsFilter } from './common/error.filter';
+
+// Force Node.js to use IPv4 ONLY
+dns.setDefaultResultOrder('ipv4first');
+process.env.NODE_OPTIONS = '--dns-result-order=ipv4first';
+
 if (!(global as any).crypto) {
   (global as any).crypto = crypto;
 }
@@ -22,7 +27,7 @@ async function bootstrap() {
 
     app.useGlobalPipes(new ValidationPipe());
     app.useGlobalFilters(new AllExceptionsFilter());
-    const port = 3000;
+    const port = process.env.PORT || 3000;
     await app.listen(port);
     logger.log(`Application is running on port ${port}`);
   } catch (error) {

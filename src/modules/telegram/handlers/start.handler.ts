@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+import { Telegraf, Context } from 'telegraf';
 import { UserService } from '../../user/user.service';
 import { TelegramService } from '../telegram.service';
 import { getMainKeyboard } from '../utils/keyboards';
@@ -16,11 +16,11 @@ export class StartHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
 
-    bot.onText(/\/start/, async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = msg.from.id.toString();
+    bot.command('start', async (ctx) => {
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
       const fullName =
-        `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
+        `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim();
 
       let user = await this.userService.registerUser({ telegramId, fullName });
 
@@ -52,20 +52,22 @@ export class StartHandler {
       });
     });
 
-    bot.onText(/\/language|تغییر زبان|change language/i, async (msg) => {
-      const chatId = msg.chat.id;
+    bot.hears(/\/language|تغییر زبان|change language/i, async (ctx) => {
+      const chatId = ctx.chat.id;
       const fullName =
-        `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
+        `${ctx.from.first_name} ${ctx.from.last_name || ''}`.trim();
       await this.sendLanguageSelection(chatId, fullName, false);
     });
 
-    bot.on('callback_query', async (query) => {
-      const chatId = query.message.chat.id;
-      const telegramId = query.from.id.toString();
-      const data = query.data;
+    bot.on('callback_query', async (ctx) => {
+      if (!ctx.chat || !ctx.from || !ctx.callbackQuery) return;
+      const query = ctx.callbackQuery;
+      const chatId = ctx.chat.id;
+      const telegramId = ctx.from.id.toString();
+      const data = 'data' in query ? query.data : '';
 
       if (data !== 'lang_fa' && data !== 'lang_en') {
-        await bot.answerCallbackQuery(query.id);
+        await ctx.answerCbQuery();
         return;
       }
 
@@ -82,12 +84,12 @@ export class StartHandler {
           parse_mode: 'HTML',
           reply_markup: getMainKeyboard(!hasPhone, newLang),
         });
-        await bot.answerCallbackQuery(query.id);
+        await ctx.answerCbQuery();
         return;
       }
 
       await this.userService.updateLanguage(telegramId, newLang);
-      user = await this.userService.findByTelegramId(telegramId); // دریافت اطلاعات جدید
+      user = await this.userService.findByTelegramId(telegramId);
 
       const confirmMessage =
         newLang === 'en'
@@ -110,7 +112,7 @@ export class StartHandler {
         });
       }
 
-      await bot.answerCallbackQuery(query.id);
+      await ctx.answerCbQuery();
     });
   }
 
