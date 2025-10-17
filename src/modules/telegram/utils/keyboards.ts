@@ -1,5 +1,4 @@
-import { TelegramBot } from 'node-telegram-bot-api';
-import { KeyboardOptions } from './interfaces';
+import * as TelegramBot from 'node-telegram-bot-api';
 
 export function getMainKeyboard(
   showContact: boolean,

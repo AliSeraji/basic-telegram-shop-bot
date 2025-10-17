@@ -11,7 +11,6 @@ import { DeliveryService } from '../../delivery/delivery.service';
 import { TelegramService } from '../telegram.service';
 import { formatProductMessage, formatOrderList } from '../utils/helpers';
 import { PAYMENT_TYPE, ORDER_STATUS } from '../../../common/constants';
-import { getMainKeyboard } from '../utils/keyboards';
 
 @Injectable()
 export class UserCallbackHandler {
@@ -32,7 +31,8 @@ export class UserCallbackHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
     bot.on('callback_query', async (query) => {
-      const chatId = query.message.chat.id;
+      if (!query.message?.chat?.id) return;
+      const chatId = query.message?.chat.id;
       const telegramId = query.from.id.toString();
       const data = query.data;
       try {
@@ -42,7 +42,7 @@ export class UserCallbackHandler {
         let user = await this.userService.findByTelegramId(telegramId);
         let language = user.language || 'fa';
 
-        if (data.startsWith('category_')) {
+        if (data?.startsWith('category_')) {
           const categoryId = parseInt(data.split('_')[1]);
           const products = await this.productService.findByCategory(categoryId);
           const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map(
@@ -57,7 +57,7 @@ export class UserCallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('product_')) {
+        } else if (data?.startsWith('product_')) {
           const productId = parseInt(data.split('_')[1]);
           const product = await this.productService.findOne(productId);
           await this.telegramService.sendPhoto(chatId, product.imageUrl, {
@@ -85,7 +85,7 @@ export class UserCallbackHandler {
               ],
             },
           });
-        } else if (data.startsWith('addtocart_')) {
+        } else if (data?.startsWith('addtocart_')) {
           const productId = parseInt(data.split('_')[1]);
           await this.cartService.addToCart({
             telegramId,
@@ -131,8 +131,8 @@ export class UserCallbackHandler {
                 try {
                   const delivery = await this.deliveryService.create({
                     orderId: order.id,
-                    latitude: msg.location.latitude,
-                    longitude: msg.location.longitude,
+                    latitude: msg.location?.latitude || 0,
+                    longitude: msg.location?.longitude || 0,
                     addressDetails: msgDetails.text,
                   });
                   const items = order.orderItems
@@ -206,7 +206,7 @@ export class UserCallbackHandler {
               await this.telegramService.sendMessage(chatId, errorMessage, {});
             }
           });
-        } else if (data.startsWith('confirm_payment_')) {
+        } else if (data?.startsWith('confirm_payment_')) {
           const parts = data.split('_');
           const orderId = parseInt(parts[2], 10);
           const paymentType = parts[3];
@@ -215,7 +215,10 @@ export class UserCallbackHandler {
             `Confirming payment for orderId: ${orderId}, paymentType: ${paymentType}`,
           );
 
-          if (![PAYMENT_TYPE.CLICK, PAYMENT_TYPE.CARD].includes(paymentType)) {
+          if (
+            paymentType !== PAYMENT_TYPE.CLICK &&
+            paymentType !== PAYMENT_TYPE.CARD
+          ) {
             this.logger.error(`Invalid payment type: ${paymentType}`);
             const errorMessage =
               language === 'fa'
@@ -294,7 +297,7 @@ export class UserCallbackHandler {
               parse_mode: 'HTML',
             });
           }
-        } else if (data.startsWith('feedback_')) {
+        } else if (data?.startsWith('feedback_')) {
           const productId = parseInt(data.split('_')[1]);
           const message =
             language === 'fa'
@@ -313,7 +316,7 @@ export class UserCallbackHandler {
               ],
             },
           });
-        } else if (data.startsWith('rate_')) {
+        } else if (data?.startsWith('rate_')) {
           const [_, productId, rating] = data.split('_');
           const message =
             language === 'fa'
@@ -328,7 +331,7 @@ export class UserCallbackHandler {
                 telegramId,
                 productId: parseInt(productId),
                 rating: parseInt(rating),
-                comment: msg.text,
+                comment: msg.text || '',
               });
               const successMessage =
                 language === 'fa'
@@ -353,7 +356,7 @@ export class UserCallbackHandler {
           const message =
             language === 'fa' ? '🗑 سبد خرید پاک شد.' : '🗑 Cart cleared.';
           await this.telegramService.sendMessage(chatId, message, {});
-        } else if (data.startsWith('view_orders_')) {
+        } else if (data?.startsWith('view_orders_')) {
           const page = parseInt(data.split('_')[2]) || 1;
           const orders = await this.orderService.getUserOrders(
             telegramId,

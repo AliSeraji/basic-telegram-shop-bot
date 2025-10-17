@@ -37,7 +37,7 @@ export class CallbackHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
     bot.on('callback_query', async (query) => {
-      const chatId = query.message.chat.id;
+      const chatId = query.message?.chat.id;
       const telegramId = query.from.id.toString();
       const data = query.data;
       let language = 'fa';
@@ -51,11 +51,11 @@ export class CallbackHandler {
         this.logger.log(`User language set to: ${language}`);
 
         if (
-          data.startsWith('add_') ||
-          data.startsWith('edit_') ||
-          data.startsWith('delete_') ||
-          data.startsWith('view_') ||
-          data.startsWith('stats_')
+          data?.startsWith('add_') ||
+          data?.startsWith('edit_') ||
+          data?.startsWith('delete_') ||
+          data?.startsWith('view_') ||
+          data?.startsWith('stats_')
         ) {
           if (!user?.isAdmin) {
             const message =
@@ -104,10 +104,10 @@ export class CallbackHandler {
                 bot.once('message', async (msgDescRu) => {
                   try {
                     await this.categoryService.create({
-                      name: name.trim(),
-                      nameFa: nameRu.trim(),
-                      description: msgDesc.text.trim(),
-                      descriptionFa: msgDescRu.text.trim() || null,
+                      name: name?.trim() || '',
+                      nameFa: nameRu?.trim() || '',
+                      description: msgDesc.text?.trim() || '',
+                      descriptionFa: msgDescRu.text?.trim() || '',
                     });
                     const successMessage =
                       language === 'fa'
@@ -163,7 +163,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('edit_cat_')) {
+        } else if (data?.startsWith('edit_cat_')) {
           const categoryId = parseInt(data.split('_')[2]);
           const message =
             language === 'fa'
@@ -201,10 +201,10 @@ export class CallbackHandler {
                 bot.once('message', async (msgDescRu) => {
                   try {
                     await this.categoryService.update(categoryId, {
-                      name: name.trim(),
-                      nameFa: nameRu.trim(),
-                      description: msgDesc.text.trim(),
-                      descriptionFa: msgDescRu.text.trim() || null,
+                      name: name?.trim() || '',
+                      nameFa: nameRu?.trim() || '',
+                      description: msgDesc.text?.trim() || '',
+                      descriptionFa: msgDescRu.text?.trim() || '',
                     });
                     const successMessage =
                       language === 'fa'
@@ -250,7 +250,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('delete_cat_')) {
+        } else if (data?.startsWith('delete_cat_')) {
           const categoryId = parseInt(data.split('_')[2]);
           await this.categoryService.remove(categoryId);
           const message =
@@ -270,7 +270,7 @@ export class CallbackHandler {
 
           bot.once('message', async (msg) => {
             try {
-              const parts = msg.text.split(';');
+              const parts = msg.text?.split(';') || '';
               if (parts.length < 8) {
                 const errorMessage =
                   language === 'fa'
@@ -331,7 +331,7 @@ export class CallbackHandler {
                 nameRu: nameRu.trim(),
                 price: parseFloat(price.trim()),
                 description: description.trim(),
-                descriptionRu: descriptionRu.trim() || null,
+                descriptionRu: descriptionRu.trim() || '',
                 imageUrl: imageUrl.trim(),
                 categoryId: parsedCategoryId,
                 stock: parsedStock,
@@ -377,7 +377,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('edit_prod_')) {
+        } else if (data?.startsWith('edit_prod_')) {
           const productId = parseInt(data.split('_')[2]);
           const message =
             language === 'fa'
@@ -387,6 +387,7 @@ export class CallbackHandler {
             reply_markup: { force_reply: true },
           });
           bot.once('message', async (msg) => {
+            if (!msg.text) return;
             try {
               const [
                 name,
@@ -431,7 +432,7 @@ export class CallbackHandler {
                 nameRu: nameRu.trim(),
                 price: parseFloat(price.trim()),
                 description: description.trim(),
-                descriptionRu: descriptionRu.trim() || null,
+                descriptionRu: descriptionRu.trim() || '',
                 imageUrl: imageUrl.trim(),
                 categoryId: parsedCategoryId,
                 stock: parsedStock,
@@ -467,7 +468,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('delete_prod_')) {
+        } else if (data?.startsWith('delete_prod_')) {
           const productId = parseInt(data.split('_')[2]);
           await this.productService.remove(productId);
           const message =
@@ -502,7 +503,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('edit_user_')) {
+        } else if (data?.startsWith('edit_user_')) {
           const userId = parseInt(data.split('_')[2]);
           const message =
             language === 'fa'
@@ -512,6 +513,7 @@ export class CallbackHandler {
             reply_markup: { force_reply: true },
           });
           bot.once('message', async (msg) => {
+            if (!msg.text) return;
             try {
               const [fullName, phone, address] = msg.text.split(';');
               await this.userService.update(userId, {
@@ -552,7 +554,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('delete_user_')) {
+        } else if (data?.startsWith('delete_user_')) {
           const userId = parseInt(data.split('_')[2]);
           await this.userService.remove(userId);
           const message =
@@ -581,7 +583,7 @@ export class CallbackHandler {
               parse_mode: 'HTML',
             },
           );
-        } else if (data.startsWith('view_orders_')) {
+        } else if (data?.startsWith('view_orders_')) {
           const page = parseInt(data.split('_')[2]) || 1;
           const orders = await this.orderService.findAll(page, 10);
           const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
@@ -630,7 +632,7 @@ export class CallbackHandler {
               parse_mode: 'HTML',
             },
           );
-        } else if (data.startsWith('view_deliveries_')) {
+        } else if (data?.startsWith('view_deliveries_')) {
           const page = parseInt(data.split('_')[2]) || 1;
           const deliveries = await this.deliveryService.findAll(page, 10);
           const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
@@ -673,7 +675,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('edit_delivery_')) {
+        } else if (data?.startsWith('edit_delivery_')) {
           const deliveryId = parseInt(data.split('_')[2]);
           const message =
             language === 'fa'
@@ -683,9 +685,34 @@ export class CallbackHandler {
             reply_markup: { force_reply: true },
           });
           bot.once('message', async (msg) => {
+            if (!msg.text) return;
             try {
+              const statusText = msg.text?.trim().toLowerCase();
+
+              if (
+                !statusText ||
+                !['pending', 'in_transit', 'delivered', 'cancelled'].includes(
+                  statusText,
+                )
+              ) {
+                const errorMessage =
+                  language === 'fa'
+                    ? '❌ وضعیت نامعتبر است. لطفاً یکی از موارد زیر را وارد کنید: pending, in_transit, delivered, cancelled'
+                    : '❌ Invalid status. Please enter one of: pending, in_transit, delivered, cancelled';
+                await this.telegramService.sendMessage(
+                  chatId,
+                  errorMessage,
+                  {},
+                );
+                return;
+              }
+
               await this.deliveryService.update(deliveryId, {
-                status: msg.text,
+                status: statusText as
+                  | 'pending'
+                  | 'in_transit'
+                  | 'delivered'
+                  | 'cancelled',
               });
               const successMessage =
                 language === 'fa'
@@ -728,7 +755,7 @@ export class CallbackHandler {
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });
-        } else if (data.startsWith('delete_fb_')) {
+        } else if (data?.startsWith('delete_fb_')) {
           const feedbackId = parseInt(data.split('_')[2]);
           await this.feedbackService.remove(feedbackId);
           const message =
@@ -745,6 +772,7 @@ export class CallbackHandler {
             reply_markup: { force_reply: true },
           });
           bot.once('message', async (msg) => {
+            if (!msg.text) return;
             try {
               const [code, discountPercent, validTill] = msg.text.split(';');
               await this.promocodeService.create({

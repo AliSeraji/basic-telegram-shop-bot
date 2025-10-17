@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
 import { CategoryService } from '../../category/category.service';
 import { TelegramService } from '../telegram.service';
 import { UserService } from '../../user/user.service';
@@ -17,6 +16,7 @@ export class CategoriesHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
     bot.onText(/📁 (دسته‌بندی‌ها|Categories)/, async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {

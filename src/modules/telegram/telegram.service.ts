@@ -1,17 +1,13 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
 import { OrderService } from '../order/order.service';
 import { DeliveryService } from '../delivery/delivery.service';
-import {
-  formatOrderList,
-  formatUserList,
-  formatProductList,
-  formatCategoryList,
-  formatFeedbackList,
-} from './utils/helpers';
+import { formatOrderList } from './utils/helpers';
 import { getMainKeyboard } from './utils/keyboards';
+
+import TelegramBot = require('node-telegram-bot-api');
+
 @Injectable()
 export class TelegramService {
   private bot: TelegramBot;
@@ -26,23 +22,38 @@ export class TelegramService {
     private deliveryService: DeliveryService,
   ) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    const webhookUrl = this.configService.get<string>('WEBHOOK_URL');
+    //const webhookUrl = this.configService.get<string>('WEBHOOK_URL');
     this.adminTelegramUser =
-      this.configService.get<string>('ADMIN_TELEGRAM_USERNAME') || 'Afinename';
+      this.configService.get<string>('ADMIN_TELEGRAM_USERNAME') || 'AfineName';
 
-    console.log('token, webhookUrl', token, webhookUrl);
+    //console.log('token, webhookUrl', token, webhookUrl);
     if (!token) {
       this.logger.error('TELEGRAM_BOT_TOKEN is not defined in .env file');
       throw new Error('TELEGRAM_BOT_TOKEN is not defined');
     }
 
-    if (!webhookUrl) {
-      this.logger.error('WEBHOOK_URL is not defined in .env file');
-      throw new Error('WEBHOOK_URL is not defined');
-    }
+    // if (!webhookUrl) {
+    //   this.logger.error('WEBHOOK_URL is not defined in .env file');
+    //   throw new Error('WEBHOOK_URL is not defined');
+    // }
 
-    this.bot = new TelegramBot(token, { polling: false });
-    this.setupWebhook(webhookUrl);
+    this.bot = new TelegramBot(token, {
+      polling: true,
+      request: {
+        url: 'https://api.telegram.org',
+        agentOptions: {
+          family: 4, // <-- Force IPv4 for outbound connections
+        },
+      },
+      // request: {
+      //   url: 'https://api.telegram.org',
+      //   agentOptions: {
+      //     family: 4,
+      //   },
+      // },
+    });
+
+    //this.setupWebhook(webhookUrl);
     this.setupCommands();
   }
 
@@ -60,7 +71,24 @@ export class TelegramService {
   }
 
   private setupCommands() {
+    this.bot.on('message', (msg) => {
+      const chatId = msg.chat.id;
+      const text = msg.text;
+
+      if (text) {
+        this.logger.log(`[DIAGNOSTIC] Received text: ${text} from ${chatId}`);
+      } else {
+        this.logger.log(
+          `[DIAGNOSTIC] Received non-text update (e.g., photo) from ${chatId}`,
+        );
+      }
+
+      // Always reply to be 100% sure it's working
+      this.bot.sendMessage(chatId, `Echo: ${text || 'Non-text message'}`);
+    });
+
     this.bot.onText(/👤 My profile| پروفایل من👤 /, async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {
@@ -85,6 +113,7 @@ export class TelegramService {
     });
 
     this.bot.onText(/تاریخچه سفارش🕘|🕘 Order history/, async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {
@@ -118,6 +147,7 @@ export class TelegramService {
     });
 
     this.bot.onText(/درباره ماℹ️|ℹ️ About us/, async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       try {
         const user = await this.userService.findByTelegramId(

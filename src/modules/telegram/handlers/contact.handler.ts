@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
 import { TelegramService } from '../telegram.service';
 import { UserService } from '../../user/user.service';
 import { getMainKeyboard } from '../utils/keyboards';
@@ -17,6 +16,7 @@ export class ContactHandler {
     const bot = this.telegramService.getBotInstance();
 
     bot.on('contact', async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
 

@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
 import { ConfigService } from '@nestjs/config';
 import { TelegramService } from '../telegram.service';
 import { UserService } from '../../user/user.service';
@@ -16,8 +15,10 @@ export class HelpHandler {
 
   handle() {
     const bot = this.telegramService.getBotInstance();
-    const adminTelegramId = '5661241603';
-    const adminTelegramUser = 'Vali_003';
+    const adminTelegramId = this.configService.get<string>('ADMIN_TELEGRAM_ID');
+    const adminTelegramUser = this.configService.get<string>(
+      'ADMIN_TELEGRAM_USERNAME',
+    );
 
     if (!adminTelegramId || !adminTelegramUser) {
       this.logger.error(
@@ -29,6 +30,7 @@ export class HelpHandler {
     }
 
     bot.onText(/🆘 (راهنما|Help)/, async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {
@@ -62,8 +64,8 @@ export class HelpHandler {
             );
             const adminMessage =
               language === 'fa'
-                ? `درخواست کمک:\nکاربر: ${replyMsg.from.id} (@${replyMsg.from.username || 'N/A'})\nپیام: ${replyText}`
-                : `Help request:\nUser: ${replyMsg.from.id} (@${replyMsg.from.username || 'N/A'})\nMessage: ${replyText}`;
+                ? `درخواست کمک:\nکاربر: ${replyMsg.from?.id} (@${replyMsg.from?.username || 'N/A'})\nپیام: ${replyText}`
+                : `Help request:\nUser: ${replyMsg.from?.id} (@${replyMsg.from?.username || 'N/A'})\nMessage: ${replyText}`;
             await this.telegramService.sendMessage(
               adminTelegramId,
               adminMessage,

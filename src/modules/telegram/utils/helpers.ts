@@ -4,7 +4,6 @@ import { Order } from '../../order/order.entity';
 import { Product } from '../../product/product.entity';
 import { User } from '../../user/user.entity';
 import { Delivery } from '../../delivery/delivery.entity';
-import { ORDER_STATUS } from '../../../common/constants';
 
 export function formatProductMessage(
   product: Product,

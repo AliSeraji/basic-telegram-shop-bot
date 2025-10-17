@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
 import { UserService } from '../../user/user.service';
 import { TelegramService } from '../telegram.service';
 import { getMainKeyboard } from '../utils/keyboards';
@@ -17,10 +16,11 @@ export class StartHandler {
     const bot = this.telegramService.getBotInstance();
 
     bot.onText(/\/start/, async (msg) => {
+      if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       const fullName =
-        `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
+        `${msg.from?.first_name} ${msg.from.last_name || ''}`.trim();
 
       let user = await this.userService.registerUser({ telegramId, fullName });
 
@@ -55,12 +55,12 @@ export class StartHandler {
     bot.onText(/\/language|تغییر زبان|change language/i, async (msg) => {
       const chatId = msg.chat.id;
       const fullName =
-        `${msg.from.first_name} ${msg.from.last_name || ''}`.trim();
+        `${msg.from?.first_name} ${msg.from?.last_name || ''}`.trim();
       await this.sendLanguageSelection(chatId, fullName, false);
     });
 
     bot.on('callback_query', async (query) => {
-      const chatId = query.message.chat.id;
+      const chatId = query.message?.chat.id;
       const telegramId = query.from.id.toString();
       const data = query.data;
 
