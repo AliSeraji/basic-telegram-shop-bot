@@ -34,6 +34,44 @@ export class CallbackHandler {
     private telegramService: TelegramService,
   ) {}
 
+  private isAdminCallback(data?: string): boolean {
+    const adminCallbacks = [
+      'add_category',
+      'view_categories',
+      'edit_category',
+      'delete_category',
+      'add_product',
+      'view_products',
+      'edit_product',
+      'delete_product',
+      'view_users',
+      'edit_user',
+      'delete_user',
+      'view_orders',
+      'view_deliveries',
+      'edit_delivery',
+      'view_feedback',
+      'delete_feedback',
+      'create_promocode',
+      'view_stats',
+    ];
+
+    // Exclude user profile edits from admin callbacks
+    const userProfileCallbacks = [
+      'edit_fullName',
+      'edit_phone',
+      'edit_email',
+      'edit_address',
+      'return_to_main_menu',
+    ];
+
+    const isAdmin =
+      adminCallbacks.some((cb) => data === cb || data?.startsWith(cb + '_')) &&
+      !userProfileCallbacks.includes(data || '');
+
+    return isAdmin;
+  }
+
   handle() {
     const bot = this.telegramService.getBotInstance();
     bot.on('callback_query', async (query) => {
@@ -46,6 +84,12 @@ export class CallbackHandler {
         this.logger.log(
           `Received callback: ${data}, telegramId: ${telegramId}`,
         );
+
+        if (!this.isAdminCallback(data)) {
+          console.log('⏭️ Not an admin callback, skipping');
+          return;
+        }
+
         const user = await this.userService.findByTelegramId(telegramId);
         language = user?.language || 'fa';
         this.logger.log(`User language set to: ${language}`);

@@ -39,8 +39,8 @@ export class UserCallbackHandler {
         this.logger.log(
           `Processing user callback: ${data} for telegramId: ${telegramId}`,
         );
-        let user = await this.userService.findByTelegramId(telegramId);
-        let language = user.language || 'fa';
+        const user = await this.userService.findByTelegramId(telegramId);
+        const language = user.language || 'fa';
 
         if (data?.startsWith('category_')) {
           const categoryId = parseInt(data.split('_')[1]);
@@ -53,7 +53,17 @@ export class UserCallbackHandler {
               },
             ],
           );
-          const message = language === 'fa' ? '📦 محصولات:' : '📦 Products:';
+          keyboard.push([
+            {
+              text:
+                language === 'fa'
+                  ? '🔙 بازگشت به دسته‌بندی‌ها'
+                  : '🔙 Back to Categories',
+              callback_data: 'back_to_categories',
+            },
+          ]);
+          const message =
+            language === 'fa' ? '📁 لیست محصولات' : '📦 Products:';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
           });

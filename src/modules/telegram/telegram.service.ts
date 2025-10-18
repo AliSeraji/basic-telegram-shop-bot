@@ -13,6 +13,7 @@ export class TelegramService {
   private bot: TelegramBot;
   private logger = new Logger(TelegramService.name);
   private readonly adminTelegramUser: string;
+  private userEditStates = new Map<string, { field: string }>();
 
   constructor(
     private configService: ConfigService,
@@ -22,81 +23,143 @@ export class TelegramService {
     private deliveryService: DeliveryService,
   ) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    //const webhookUrl = this.configService.get<string>('WEBHOOK_URL');
     this.adminTelegramUser =
       this.configService.get<string>('ADMIN_TELEGRAM_USERNAME') || 'AfineName';
 
-    //console.log('token, webhookUrl', token, webhookUrl);
     if (!token) {
       this.logger.error('TELEGRAM_BOT_TOKEN is not defined in .env file');
       throw new Error('TELEGRAM_BOT_TOKEN is not defined');
     }
-
-    // if (!webhookUrl) {
-    //   this.logger.error('WEBHOOK_URL is not defined in .env file');
-    //   throw new Error('WEBHOOK_URL is not defined');
-    // }
 
     this.bot = new TelegramBot(token, {
       polling: true,
       request: {
         url: 'https://api.telegram.org',
         agentOptions: {
-          family: 4, // <-- Force IPv4 for outbound connections
+          family: 4,
         },
       },
-      // request: {
-      //   url: 'https://api.telegram.org',
-      //   agentOptions: {
-      //     family: 4,
-      //   },
-      // },
     });
 
-    //this.setupWebhook(webhookUrl);
     this.setupCommands();
   }
 
-  private async setupWebhook(webhookUrl: string) {
-    try {
-      this.logger.log(`Setting webhook to ${webhookUrl}`);
-      const startTime = Date.now();
-      await this.bot.setWebHook(webhookUrl);
-      const duration = Date.now() - startTime;
-      this.logger.log(`Webhook set in ${duration}ms`);
-    } catch (error) {
-      this.logger.error(`Failed to set webhook: ${error.message}`);
-      throw error;
-    }
-  }
-
   private setupCommands() {
-    this.bot.on('message', (msg) => {
+    this.bot.on('message', async (msg) => {
       const chatId = msg.chat.id;
       const text = msg.text;
+      const telegramId = msg.from?.id.toString();
 
       if (text) {
         this.logger.log(`[DIAGNOSTIC] Received text: ${text} from ${chatId}`);
-      } else {
-        this.logger.log(
-          `[DIAGNOSTIC] Received non-text update (e.g., photo) from ${chatId}`,
-        );
       }
 
-      // Always reply to be 100% sure it's working
-      this.bot.sendMessage(chatId, `Echo: ${text || 'Non-text message'}`);
+      // Handle profile editing states
+      if (telegramId && this.userEditStates.has(telegramId)) {
+        const state = this.userEditStates.get(telegramId);
+
+        // Check state immediately after getting it
+        if (!state || !text) return;
+
+        try {
+          const user = await this.userService.findByTelegramId(telegramId);
+          const language = user.language || 'fa';
+
+          // Update the specific field
+          const updateData: any = {};
+          updateData[state.field] = text;
+
+          await this.userService.update(user.id, updateData);
+
+          const fieldNames: any = {
+            fullName: language === 'fa' ? 'نام' : 'Name',
+            phone: language === 'fa' ? 'شماره تلفن' : 'Phone',
+            email: language === 'fa' ? 'ایمیل' : 'Email',
+            userAddress: language === 'fa' ? 'آدرس' : 'Address',
+          };
+
+          const successMessage =
+            language === 'fa'
+              ? `✅ ${fieldNames[state.field]} با موفقیت به‌روزرسانی شد!`
+              : `✅ ${fieldNames[state.field]} updated successfully!`;
+
+          await this.bot.sendMessage(chatId, successMessage, {
+            reply_markup: getMainKeyboard(false, language),
+          });
+
+          // Clear the state
+          this.userEditStates.delete(telegramId);
+        } catch (error) {
+          this.logger.error(`Error updating profile: ${error.message}`);
+          const language =
+            (await this.userService.findByTelegramId(telegramId))?.language ||
+            'fa';
+          const errorMessage =
+            language === 'fa'
+              ? '❌ خطا در به‌روزرسانی اطلاعات'
+              : '❌ Error updating information';
+          await this.bot.sendMessage(chatId, errorMessage);
+          this.userEditStates.delete(telegramId);
+        }
+        return; // Don't process other handlers
+      }
     });
 
-    this.bot.onText(/👤 My profile| پروفایل من👤 /, async (msg) => {
+    this.bot.onText(/👤 پروفایل من|👤 My Profile/i, async (msg) => {
       if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
       try {
         const user = await this.userService.findByTelegramId(telegramId);
         const language = user.language || 'fa';
-        const message = `${language === 'fa' ? '👤 My profile' : 'پروفایل من👤'}\n${language === 'fa' ? 'نام' : 'Name'}: ${user.fullName}\n${language === 'fa' ? 'شماره تلفن' : 'PhoneNumber'}: ${user.phone || (language === 'fa' ? 'وارد نشده' : 'Not Specified')}\nTelegram ID: ${user.telegramId}`;
+
+        const message =
+          language === 'fa'
+            ? `👤 پروفایل من\n\n` +
+              `📝 نام: ${user.fullName || 'وارد نشده'}\n` +
+              `📞 شماره تلفن: ${user.phone || 'وارد نشده'}\n` +
+              `📧 ایمیل: ${user.email || 'وارد نشده'}\n` +
+              `📍 آدرس: ${user.userAddress || 'وارد نشده'}\n`
+            : `👤 My Profile\n\n` +
+              `📝 Name: ${user.fullName || 'Not specified'}\n` +
+              `📞 Phone: ${user.phone || 'Not specified'}\n` +
+              `📧 Email: ${user.email || 'Not specified'}\n` +
+              `📍 Address: ${user.userAddress || 'Not specified'}\n`;
+
+        const keyboard: TelegramBot.InlineKeyboardButton[][] = [
+          [
+            {
+              text: language === 'fa' ? '✏️ ویرایش نام' : '✏️ Edit Name',
+              callback_data: 'edit_fullName',
+            },
+            {
+              text: language === 'fa' ? '✏️ ویرایش تلفن' : '✏️ Edit Phone',
+              callback_data: 'edit_phone',
+            },
+          ],
+          [
+            {
+              text: language === 'fa' ? '✏️ ویرایش ایمیل' : '✏️ Edit Email',
+              callback_data: 'edit_email',
+            },
+            {
+              text: language === 'fa' ? '✏️ ویرایش آدرس' : '✏️ Edit Address',
+              callback_data: 'edit_userAddress',
+            },
+          ],
+          [
+            {
+              text:
+                language === 'fa'
+                  ? '🏠 بازگشت به منوی اصلی'
+                  : '🏠 Return to Main Menu',
+              callback_data: 'return_to_main_menu',
+            },
+          ],
+        ];
+
         await this.bot.sendMessage(chatId, message, {
-          reply_markup: getMainKeyboard(!user.phone, language),
+          reply_markup: { inline_keyboard: keyboard },
         });
       } catch (error) {
         this.logger.error(`Error in profile: ${error.message}`);
@@ -112,7 +175,83 @@ export class TelegramService {
       }
     });
 
-    this.bot.onText(/تاریخچه سفارش🕘|🕘 Order history/, async (msg) => {
+    // Handle profile edit callbacks
+    this.bot.on('callback_query', async (query) => {
+      if (!query.data?.startsWith('edit_')) return;
+      if (!query.message?.chat?.id || !query.from) return;
+
+      const chatId = query.message.chat.id;
+      const telegramId = query.from.id.toString();
+      const field = query.data.replace('edit_', '');
+
+      try {
+        const user = await this.userService.findByTelegramId(telegramId);
+        const language = user.language || 'fa';
+
+        const prompts: any = {
+          fullName:
+            language === 'fa'
+              ? '📝 نام خود را وارد کنید:'
+              : '📝 Enter your name:',
+          phone:
+            language === 'fa'
+              ? '📞 شماره تلفن خود را وارد کنید:'
+              : '📞 Enter your phone number:',
+          email:
+            language === 'fa'
+              ? '📧 ایمیل خود را وارد کنید:'
+              : '📧 Enter your email:',
+          userAddress:
+            language === 'fa'
+              ? '📍 آدرس خود را وارد کنید:'
+              : '📍 Enter your address:',
+        };
+
+        // Set the edit state
+        this.userEditStates.set(telegramId, { field });
+
+        await this.bot.sendMessage(chatId, prompts[field], {
+          reply_markup: { force_reply: true },
+        });
+
+        await this.bot.answerCallbackQuery(query.id);
+      } catch (error) {
+        this.logger.error(`Error in edit callback: ${error.message}`);
+        await this.bot.answerCallbackQuery(query.id);
+      }
+    });
+
+    // Handle return to main menu
+    this.bot.on('callback_query', async (query) => {
+      if (query.data !== 'return_to_main_menu') return;
+      if (!query.message?.chat?.id || !query.from) return;
+
+      const chatId = query.message.chat.id;
+      const telegramId = query.from.id.toString();
+
+      try {
+        // Clear any edit state
+        this.userEditStates.delete(telegramId);
+
+        const user = await this.userService.findByTelegramId(telegramId);
+        const language = user.language || 'fa';
+
+        const message =
+          language === 'fa'
+            ? '🏠 به منوی اصلی بازگشتید'
+            : '🏠 Returned to main menu';
+
+        await this.bot.sendMessage(chatId, message, {
+          reply_markup: getMainKeyboard(false, language),
+        });
+        await this.bot.answerCallbackQuery(query.id);
+      } catch (error) {
+        this.logger.error(`Error in return_to_main_menu: ${error.message}`);
+        await this.bot.answerCallbackQuery(query.id);
+      }
+    });
+
+    this.bot.onText(/🕘 تاریخچه سفارشات|🕘 Order History/i, async (msg) => {
       if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
@@ -127,7 +266,7 @@ export class TelegramService {
             : 'No orders';
         await this.bot.sendMessage(
           chatId,
-          `${language === 'fa' ? 'تاریخچه سفارش🕘' : '🕘 Order history'}\n${message}`,
+          `${language === 'fa' ? '🕘 تاریخچه سفارشات' : '🕘 Order history'}\n${message}`,
           {
             reply_markup: getMainKeyboard(false, language),
           },
@@ -146,7 +285,7 @@ export class TelegramService {
       }
     });
 
-    this.bot.onText(/درباره ماℹ️|ℹ️ About us/, async (msg) => {
+    this.bot.onText(/ℹ️ درباره ما|ℹ️ About Us/i, async (msg) => {
       if (!msg.from) return;
       const chatId = msg.chat.id;
       try {
@@ -154,7 +293,7 @@ export class TelegramService {
           msg.from.id.toString(),
         );
         const language = user.language || 'fa';
-        const message = `${language === 'fa' ? 'درباره ماℹ️' : 'ℹ️ About us'}\n${language === 'fa' ? 'ما یک فروشگاه آنلاین هستیم که محصولات باکیفیت آرایشی بهداشتی ژاپن را ارائه میدهیم' : 'We are an online store offering beauty products from Japan.'}\n${language === 'fa' ? 'تماس' : 'Contact'}: @${this.adminTelegramUser}\n${language === 'fa' ? 'پیج اینستاگرام' : 'Instagram page'}: https://yourshop.uz`;
+        const message = `${language === 'fa' ? 'ℹ️ درباره ما' : 'ℹ️ About us'}\n\n${language === 'fa' ? 'ما یک فروشگاه آنلاین هستیم که محصولات باکیفیت آرایشی بهداشتی ژاپن را ارائه میدهیم' : 'We are an online store offering beauty products from Japan.'}\n\n${language === 'fa' ? 'تماس' : 'Contact'}: @${this.adminTelegramUser}\n${language === 'fa' ? 'پیج اینستاگرام' : 'Instagram page'}: https://yourshop.uz`;
         await this.bot.sendMessage(chatId, message, {
           reply_markup: getMainKeyboard(false, language),
         });
@@ -172,6 +311,7 @@ export class TelegramService {
       }
     });
   }
+
   getBotInstance(): TelegramBot {
     return this.bot;
   }

@@ -15,4 +15,8 @@ export class CreateUserDto {
 
   @IsString()
   userAddress?: string;
+
+  @IsString()
+  @IsOptional()
+  language: string | null;
 }

@@ -6,7 +6,7 @@ export function getMainKeyboard(
 ): TelegramBot.SendMessageOptions['reply_markup'] {
   const keyboard: TelegramBot.KeyboardButton[][] = [
     [
-      { text: language === 'fa' ? '📁 دسته‌بندی‌ها' : '📁 Categories' },
+      { text: language === 'fa' ? '📁 لیست محصولات' : '📁 Categories' },
       { text: language === 'fa' ? '🛒 سبد خرید' : '🛒 Cart' },
     ],
     [
@@ -17,18 +17,7 @@ export function getMainKeyboard(
       { text: language === 'fa' ? 'ℹ️ درباره ما' : 'ℹ️ About Us' },
       { text: language === 'fa' ? '🆘 راهنما' : '🆘 Help' },
     ],
-    [{ text: '🌐 ' + (language === 'fa' ? 'تغییر زبان' : 'Change Language') }],
   ];
-
-  if (showContact) {
-    keyboard.unshift([
-      {
-        text:
-          language === 'fa' ? '📞 ارسال شماره تلفن' : '📞 Send Phone Number',
-        request_contact: true,
-      },
-    ]);
-  }
 
   return {
     keyboard,

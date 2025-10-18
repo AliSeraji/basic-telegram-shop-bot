@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -49,7 +57,10 @@ export class UserController {
   @ApiOperation({ summary: 'Update user phone number' })
   @ApiResponse({ status: 200, description: 'Phone number updated.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
-  updatePhoneNumber(@Param('telegramId') telegramId: string, @Body('phone') phone: string) {
+  updatePhoneNumber(
+    @Param('telegramId') telegramId: string,
+    @Body('phone') phone: string,
+  ) {
     return this.userService.updatePhoneNumber(telegramId, phone);
   }
 

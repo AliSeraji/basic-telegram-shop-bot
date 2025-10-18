@@ -3,7 +3,7 @@ import { Order } from '../order/order.entity';
 import { Cart } from '../cart/cart.entity';
 import { Feedback } from '../feedback/feedback.entity';
 
-@Entity("users")
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -17,10 +17,10 @@ export class User {
   @Column({ nullable: true })
   phone: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   userAddress: string;
 
-  @Column({nullable: true})
+  @Column({ nullable: true })
   email: string;
 
   @Column({ default: false })
