@@ -7,6 +7,7 @@ import { formatOrderList } from './utils/helpers';
 import { getMainKeyboard } from './utils/keyboards';
 
 import TelegramBot = require('node-telegram-bot-api');
+import { profileMessage } from './constants';
 
 @Injectable()
 export class TelegramService {
@@ -60,6 +61,11 @@ export class TelegramService {
 
         // Check state immediately after getting it
         if (!state || !text) return;
+
+        const validProfileFields = ['fullName', 'phone', 'email', 'address'];
+        if (!validProfileFields.includes(state.field)) {
+          return;
+        }
 
         try {
           const user = await this.userService.findByTelegramId(telegramId);
@@ -119,7 +125,8 @@ export class TelegramService {
               `📝 نام: ${user.fullName || 'وارد نشده'}\n` +
               `📞 شماره تلفن: ${user.phone || 'وارد نشده'}\n` +
               `📧 ایمیل: ${user.email || 'وارد نشده'}\n` +
-              `📍 آدرس: ${user.userAddress || 'وارد نشده'}\n`
+              `📍 آدرس: ${user.userAddress || 'وارد نشده'}\n` +
+              profileMessage
             : `👤 My Profile\n\n` +
               `📝 Name: ${user.fullName || 'Not specified'}\n` +
               `📞 Phone: ${user.phone || 'Not specified'}\n` +

@@ -5,15 +5,15 @@ export class UpdateCategoryDto {
   @IsOptional()
   name: string;
 
-  @IsString()
-  @IsOptional()
-  nameFa: string;
+  // @IsString()
+  // @IsOptional()
+  // nameFa: string;
 
   @IsString()
   @IsOptional()
-  description: string;
+  description?: string;
 
-  @IsString()
-  @IsOptional()
-  descriptionFa: string;
+  // @IsString()
+  // @IsOptional()
+  // descriptionFa: string;
 }

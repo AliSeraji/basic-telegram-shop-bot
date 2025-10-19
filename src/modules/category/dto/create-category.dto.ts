@@ -5,13 +5,13 @@ export class CreateCategoryDto {
   @IsNotEmpty()
   name: string;
 
-  @IsString()
-  @IsNotEmpty()
-  nameFa: string;
+  // @IsString()
+  // @IsNotEmpty()
+  // nameFa: string;
 
   @IsString()
-  description: string;
+  description?: string;
 
-  @IsString()
-  descriptionFa: string;
+  // @IsString()
+  // descriptionFa: string;
 }

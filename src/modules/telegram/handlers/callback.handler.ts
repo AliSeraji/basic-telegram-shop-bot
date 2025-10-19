@@ -54,6 +54,12 @@ export class CallbackHandler {
       'delete_feedback',
       'create_promocode',
       'view_stats',
+      'edit_cat',
+      'delete_cat',
+      'edit_prod',
+      'delete_prod',
+      'delete_user',
+      'delete_fb',
     ];
 
     // Exclude user profile edits from admin callbacks
@@ -114,72 +120,47 @@ export class CallbackHandler {
         if (data === 'add_category') {
           const message =
             language === 'fa'
-              ? '📋 نام دسته‌بندی را وارد کنید (به فارسی):'
-              : '📋 Enter category name (in Persian):';
+              ? '📋 نام دسته‌بندی را وارد کنید:'
+              : '📋 Enter category name:';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
+
           bot.once('message', async (msgName) => {
             const name = msgName.text;
-            const messageRu =
+
+            const descMessage =
               language === 'fa'
-                ? '📋 نام دسته‌بندی را وارد کنید (به انگلیسی):'
-                : '📋 Enter category name (in English):';
-            await this.telegramService.sendMessage(chatId, messageRu, {
+                ? '📝 توضیحات دسته‌بندی را وارد کنید (اختیاری):'
+                : '📝 Enter category description (optional):';
+            await this.telegramService.sendMessage(chatId, descMessage, {
               reply_markup: { force_reply: true },
             });
-            bot.once('message', async (msgNameRu) => {
-              const nameRu = msgNameRu.text;
-              const descMessage =
-                language === 'fa'
-                  ? '📝 توضیحات دسته‌بندی را وارد کنید (به فارسی):'
-                  : '📝 Enter category description (in Persian):';
-              await this.telegramService.sendMessage(chatId, descMessage, {
-                reply_markup: { force_reply: true },
-              });
-              bot.once('message', async (msgDesc) => {
-                const descMessageRu =
+
+            bot.once('message', async (msgDesc) => {
+              try {
+                await this.categoryService.create({
+                  name: name?.trim() || '',
+                  description: msgDesc.text?.trim() || '',
+                });
+
+                const successMessage =
                   language === 'fa'
-                    ? '📝 توضیحات دسته‌بندی را وارد کنید (به انگلیسی، اختیاری):'
-                    : '📝 Enter category description (in English, optional):';
-                await this.telegramService.sendMessage(chatId, descMessageRu, {
-                  reply_markup: { force_reply: true },
+                    ? '✅ دسته‌بندی با موفقیت اضافه شد!'
+                    : '✅ Category added successfully!';
+                await this.telegramService.sendMessage(chatId, successMessage, {
+                  reply_markup: getAdminKeyboard(language),
                 });
-                bot.once('message', async (msgDescRu) => {
-                  try {
-                    await this.categoryService.create({
-                      name: name?.trim() || '',
-                      nameFa: nameRu?.trim() || '',
-                      description: msgDesc.text?.trim() || '',
-                      descriptionFa: msgDescRu.text?.trim() || '',
-                    });
-                    const successMessage =
-                      language === 'fa'
-                        ? '✅ دسته‌بندی اضافه شد!'
-                        : '✅ Category added!';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      successMessage,
-                      {
-                        reply_markup: getAdminKeyboard(language),
-                      },
-                    );
-                  } catch (error) {
-                    this.logger.error(
-                      `Error in add_category: ${error.message}`,
-                    );
-                    const errorMessage =
-                      language === 'fa'
-                        ? '❌ خطا در افزودن دسته‌بندی رخ داد.'
-                        : '❌ Error occurred while adding category.';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      errorMessage,
-                      {},
-                    );
-                  }
+              } catch (error) {
+                this.logger.error(`Error in add_category: ${error.message}`);
+                const errorMessage =
+                  language === 'fa'
+                    ? '❌ خطا در افزودن دسته‌بندی رخ داد.'
+                    : '❌ Error occurred while adding category.';
+                await this.telegramService.sendMessage(chatId, errorMessage, {
+                  reply_markup: getAdminKeyboard(language),
                 });
-              });
+              }
             });
           });
         } else if (data === 'view_categories') {
@@ -218,65 +199,38 @@ export class CallbackHandler {
           });
           bot.once('message', async (msgName) => {
             const name = msgName.text;
-            const messageRu =
+            const descMessage =
               language === 'fa'
-                ? '📋 نام جدید دسته‌بندی را وارد کنید (به انگلیسی):'
-                : '📋 Enter new category name (in English):';
-            await this.telegramService.sendMessage(chatId, messageRu, {
+                ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به فارسی):'
+                : '📝 Enter new category description (in Persian):';
+            await this.telegramService.sendMessage(chatId, descMessage, {
               reply_markup: { force_reply: true },
             });
-            bot.once('message', async (msgNameRu) => {
-              const nameRu = msgNameRu.text;
-              const descMessage =
-                language === 'fa'
-                  ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به فارسی):'
-                  : '📝 Enter new category description (in Persian):';
-              await this.telegramService.sendMessage(chatId, descMessage, {
-                reply_markup: { force_reply: true },
-              });
-              bot.once('message', async (msgDesc) => {
-                const descMessageRu =
+            bot.once('message', async (msgDesc) => {
+              try {
+                await this.categoryService.update(categoryId, {
+                  name: name?.trim() || '',
+                  description: msgDesc.text?.trim() || '',
+                });
+                const successMessage =
                   language === 'fa'
-                    ? '📝 توضیحات جدید دسته‌بندی را وارد کنید (به انگلیسی، اختیاری):'
-                    : '📝 Enter new category description (in English, optional):';
-                await this.telegramService.sendMessage(chatId, descMessageRu, {
-                  reply_markup: { force_reply: true },
+                    ? '✅ دسته‌بندی به‌روزرسانی شد!'
+                    : '✅ Category updated!';
+                await this.telegramService.sendMessage(chatId, successMessage, {
+                  reply_markup: getAdminKeyboard(language),
                 });
-                bot.once('message', async (msgDescRu) => {
-                  try {
-                    await this.categoryService.update(categoryId, {
-                      name: name?.trim() || '',
-                      nameFa: nameRu?.trim() || '',
-                      description: msgDesc.text?.trim() || '',
-                      descriptionFa: msgDescRu.text?.trim() || '',
-                    });
-                    const successMessage =
-                      language === 'fa'
-                        ? '✅ دسته‌بندی به‌روزرسانی شد!'
-                        : '✅ Category updated!';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      successMessage,
-                      {
-                        reply_markup: getAdminKeyboard(language),
-                      },
-                    );
-                  } catch (error) {
-                    this.logger.error(
-                      `Error in edit_category: ${error.message}`,
-                    );
-                    const errorMessage =
-                      language === 'fa'
-                        ? '❌ خطا در ویرایش دسته‌بندی رخ داد.'
-                        : '❌ Error occurred while editing category.';
-                    await this.telegramService.sendMessage(
-                      chatId,
-                      errorMessage,
-                      {},
-                    );
-                  }
-                });
-              });
+              } catch (error) {
+                this.logger.error(`Error in edit_category: ${error.message}`);
+                const errorMessage =
+                  language === 'fa'
+                    ? '❌ خطا در ویرایش دسته‌بندی رخ داد.'
+                    : '❌ Error occurred while editing category.';
+                await this.telegramService.sendMessage(
+                  chatId,
+                  errorMessage,
+                  {},
+                );
+              }
             });
           });
         } else if (data === 'delete_category') {
