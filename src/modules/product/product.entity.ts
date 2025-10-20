@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
+  JoinColumn,
 } from 'typeorm';
 import { Category } from '../category/category.entity';
 import { Cart } from '../cart/cart.entity';
@@ -39,9 +40,13 @@ export class Product {
   @Column()
   createdAt: Date;
 
+  @Column()
+  categoryId: number;
+
   @ManyToOne(() => Category, (category) => category.products, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'categoryId' })
   category: Category;
 
   @OneToMany(() => Cart, (cart) => cart.product, { cascade: true })

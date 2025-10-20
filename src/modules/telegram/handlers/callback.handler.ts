@@ -18,6 +18,15 @@ import {
   formatStats,
 } from '../utils/helpers';
 import { getAdminKeyboard } from '../utils/keyboards';
+import {
+  handleCategorySelection,
+  startProductCreation,
+} from 'src/modules/product/product-creation.helper';
+import {
+  handleCategorySelectionForUpdate,
+  showProductsForEdit,
+  startProductUpdate,
+} from 'src/modules/product/product-update.helper';
 
 @Injectable()
 export class CallbackHandler {
@@ -60,6 +69,8 @@ export class CallbackHandler {
       'delete_prod',
       'delete_user',
       'delete_fb',
+      'select_cat_for_product',
+      'update_cat_for_product',
     ];
 
     // Exclude user profile edits from admin callbacks
@@ -81,6 +92,7 @@ export class CallbackHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
     bot.on('callback_query', async (query) => {
+      if (!query.message?.chat?.id) return;
       const chatId = query.message?.chat.id;
       const telegramId = query.from.id.toString();
       const data = query.data;
@@ -257,99 +269,28 @@ export class CallbackHandler {
             reply_markup: getAdminKeyboard(language),
           });
         } else if (data === 'add_product') {
-          const message =
-            language === 'fa'
-              ? '📦 اطلاعات محصول را وارد کنید (نام فارسی;نام انگلیسی;قیمت;توضیحات فارسی;توضیحات انگلیسی;URL تصویر;شناسه دسته‌بندی;موجودی انبار):'
-              : '📦 Enter product data (Persian name;English name;price;Persian description;English description;image URL;category ID;stock quantity):';
-
-          await this.telegramService.sendMessage(chatId, message, {
-            reply_markup: { force_reply: true },
-          });
-
-          bot.once('message', async (msg) => {
-            try {
-              const parts = msg.text?.split(';') || '';
-              if (parts.length < 8) {
-                const errorMessage =
-                  language === 'fa'
-                    ? '❌ اطلاعات ناقص است. لطفاً 8 فیلد را وارد کنید.'
-                    : '❌ Insufficient data. Please enter all 8 fields.';
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-
-              const [
-                name,
-                nameRu,
-                price,
-                description,
-                descriptionRu,
-                imageUrl,
-                categoryId,
-                stock,
-              ] = parts;
-
-              const parsedCategoryId = parseInt(categoryId.trim());
-              const parsedStock = parseInt(stock.trim());
-
-              if (isNaN(parsedCategoryId) || isNaN(parsedStock)) {
-                const errorMessage =
-                  language === 'fa'
-                    ? '❌ شناسه دسته‌بندی یا موجودی انبار نامعتبر است.'
-                    : '❌ Invalid category ID or stock quantity.';
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-
-              const category =
-                await this.categoryService.findOne(parsedCategoryId);
-              if (!category) {
-                const errorMessage =
-                  language === 'fa'
-                    ? `❌ دسته‌بندی با شناسه ${parsedCategoryId} یافت نشد.`
-                    : `❌ Category with ID ${parsedCategoryId} not found.`;
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-
-              await this.productService.create({
-                name: name.trim(),
-                nameRu: nameRu.trim(),
-                price: parseFloat(price.trim()),
-                description: description.trim(),
-                descriptionRu: descriptionRu.trim() || '',
-                imageUrl: imageUrl.trim(),
-                categoryId: parsedCategoryId,
-                stock: parsedStock,
-                isActive: true,
-              });
-
-              const successMessage =
-                language === 'fa' ? '✅ محصول اضافه شد.' : '✅ Product added.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in add_product: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در افزودن محصول رخ داد.'
-                  : '❌ Error occurred while adding product.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
-          });
+          if (!chatId) return;
+          await startProductCreation(
+            bot,
+            chatId,
+            telegramId,
+            language,
+            this.telegramService,
+            this.categoryService,
+          );
+        } else if (data?.startsWith('select_cat_for_product_')) {
+          if (!chatId) return;
+          const categoryId = parseInt(data.split('_')[4]);
+          await bot.answerCallbackQuery(query.id);
+          await handleCategorySelection(
+            bot,
+            chatId,
+            telegramId,
+            categoryId,
+            language,
+            this.telegramService,
+            this.productService,
+          );
         } else if (data === 'view_products') {
           const products = await this.productService.findAll();
           await this.telegramService.sendMessage(
@@ -361,96 +302,43 @@ export class CallbackHandler {
             },
           );
         } else if (data === 'edit_product') {
-          const products = await this.productService.findAll();
-          const keyboard = products.map((prod) => [
-            {
-              text: language === 'fa' ? prod.name : prod.nameJP || prod.name,
-              callback_data: `edit_prod_${prod.id}`,
-            },
-          ]);
-          const message =
-            language === 'fa'
-              ? '✏️ محصول مورد نظر برای ویرایش را انتخاب کنید:'
-              : '✏️ Select product to edit:';
-          await this.telegramService.sendMessage(chatId, message, {
-            reply_markup: { inline_keyboard: keyboard },
-          });
+          if (!chatId) return;
+          await showProductsForEdit(
+            chatId,
+            language,
+            this.telegramService,
+            this.productService,
+          );
         } else if (data?.startsWith('edit_prod_')) {
+          if (!chatId) return;
           const productId = parseInt(data.split('_')[2]);
-          const message =
-            language === 'fa'
-              ? '📦 اطلاعات جدید محصول را وارد کنید (نام فارسی;نام انگلیسی;قیمت;توضیحات فارسی;توضیحات انگلیسی;URL تصویر;شناسه دسته‌بندی;موجودی انبار):'
-              : '📦 Enter new product data (Persian name;English name;price;Persian description;English description;image URL;category ID;stock quantity):';
-          await this.telegramService.sendMessage(chatId, message, {
-            reply_markup: { force_reply: true },
-          });
-          bot.once('message', async (msg) => {
-            if (!msg.text) return;
-            try {
-              const [
-                name,
-                nameRu,
-                price,
-                description,
-                descriptionRu,
-                imageUrl,
-                categoryId,
-                stock,
-              ] = msg.text.split(';');
-              const parsedCategoryId = parseInt(categoryId.trim());
-              const parsedStock = parseInt(stock.trim());
-              if (isNaN(parsedCategoryId) || isNaN(parsedStock)) {
-                const errorMessage =
-                  language === 'fa'
-                    ? '❌ شناسه دسته‌بندی یا موجودی انبار نامعتبر است.'
-                    : '❌ Invalid category ID or stock quantity.';
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-              const category =
-                await this.categoryService.findOne(parsedCategoryId);
-              if (!category) {
-                const errorMessage =
-                  language === 'fa'
-                    ? `❌ دسته‌بندی با شناسه ${parsedCategoryId} یافت نشد.`
-                    : `❌ Category with ID ${parsedCategoryId} not found.`;
-                await this.telegramService.sendMessage(
-                  chatId,
-                  errorMessage,
-                  {},
-                );
-                return;
-              }
-              await this.productService.update(productId, {
-                name: name.trim(),
-                nameRu: nameRu.trim(),
-                price: parseFloat(price.trim()),
-                description: description.trim(),
-                descriptionRu: descriptionRu.trim() || '',
-                imageUrl: imageUrl.trim(),
-                categoryId: parsedCategoryId,
-                stock: parsedStock,
-              });
-              const successMessage =
-                language === 'fa'
-                  ? '✅ محصول به‌روزرسانی شد.'
-                  : '✅ Product updated.';
-              await this.telegramService.sendMessage(chatId, successMessage, {
-                reply_markup: getAdminKeyboard(language),
-              });
-            } catch (error) {
-              this.logger.error(`Error in edit_product: ${error.message}`);
-              const errorMessage =
-                language === 'fa'
-                  ? '❌ خطا در ویرایش محصول رخ داد.'
-                  : '❌ Error occurred while editing product.';
-              await this.telegramService.sendMessage(chatId, errorMessage, {});
-            }
-          });
+          await bot.answerCallbackQuery(query.id);
+          await startProductUpdate(
+            bot,
+            chatId,
+            telegramId,
+            productId,
+            language,
+            this.telegramService,
+            this.productService,
+            this.categoryService,
+          );
+        } else if (data?.startsWith('update_cat_for_product_')) {
+          if (!chatId) return;
+          const parts = data.split('_');
+          const productId = parseInt(parts[4]);
+          const categoryId = parseInt(parts[5]);
+          await bot.answerCallbackQuery(query.id);
+          await handleCategorySelectionForUpdate(
+            bot,
+            chatId,
+            telegramId,
+            productId,
+            categoryId,
+            language,
+            this.telegramService,
+            this.productService,
+          );
         } else if (data === 'delete_product') {
           const products = await this.productService.findAll();
           const keyboard = products.map((prod) => [
