@@ -11,6 +11,7 @@ import { DeliveryService } from '../../delivery/delivery.service';
 import { TelegramService } from '../telegram.service';
 import { formatProductMessage, formatOrderList } from '../utils/helpers';
 import { PAYMENT_TYPE, ORDER_STATUS } from '../../../common/constants';
+import { sendProduct } from 'src/modules/product/helpers/product-display.heper';
 
 @Injectable()
 export class UserCallbackHandler {
@@ -48,7 +49,7 @@ export class UserCallbackHandler {
           const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map(
             (prod) => [
               {
-                text: `${language === 'fa' ? prod.name : prod.nameJP || prod.name} - ${prod.price} تومان`,
+                text: `${language === 'fa' ? prod.name : prod.name} - ${prod.price} تومان`,
                 callback_data: `product_${prod.id}`,
               },
             ],
@@ -70,7 +71,7 @@ export class UserCallbackHandler {
         } else if (data?.startsWith('product_')) {
           const productId = parseInt(data.split('_')[1]);
           const product = await this.productService.findOne(productId);
-          await this.telegramService.sendPhoto(chatId, product.imageUrl, {
+          await sendProduct(bot, chatId, product, language, {
             caption: formatProductMessage(product, language),
             reply_markup: {
               inline_keyboard: [
@@ -148,7 +149,7 @@ export class UserCallbackHandler {
                   const items = order.orderItems
                     ?.map(
                       (item) =>
-                        `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+                        `${language === 'fa' ? item.product.name : item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
                     )
                     .join(', ');
                   const message =
@@ -266,7 +267,7 @@ export class UserCallbackHandler {
           const items = order.orderItems
             ?.map(
               (item) =>
-                `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+                `${language === 'fa' ? item.product.name : item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
             )
             .join(', ');
           const message =

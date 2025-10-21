@@ -60,7 +60,7 @@ export class ProductService {
     });
 
     products.forEach((prod) => {
-      console.log(`Product: ${prod.name}, nameRu: ${prod.nameJP}`);
+      console.log(`Product: ${prod.name}`);
     });
 
     return products;

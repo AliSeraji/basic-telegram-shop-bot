@@ -24,6 +24,13 @@ export class CreateProductDto {
   @IsNotEmpty()
   imageUrl: string;
 
+  @IsOptional()
+  imageData?: Buffer;
+
+  @IsString()
+  @IsOptional()
+  imageMimeType?: string;
+
   @IsNumber()
   @IsPositive()
   stock: number;

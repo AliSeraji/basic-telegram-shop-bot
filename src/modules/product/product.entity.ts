@@ -22,14 +22,17 @@ export class Product {
   @Column()
   description: string;
 
-  @Column({ nullable: true })
-  nameJP: string;
-
   @Column()
   price: number;
 
-  @Column()
+  @Column({ nullable: true })
   imageUrl: string;
+
+  @Column({ type: 'bytea', nullable: true })
+  imageData: Buffer;
+
+  @Column({ nullable: true })
+  imageMimeType: string; // e.g., 'image/jpeg', 'image/png'
 
   @Column()
   stock: number;

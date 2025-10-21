@@ -21,12 +21,12 @@ import { getAdminKeyboard } from '../utils/keyboards';
 import {
   handleCategorySelection,
   startProductCreation,
-} from 'src/modules/product/product-creation.helper';
+} from 'src/modules/product/helpers/product-creation.helper';
 import {
   handleCategorySelectionForUpdate,
   showProductsForEdit,
   startProductUpdate,
-} from 'src/modules/product/product-update.helper';
+} from 'src/modules/product/helpers/product-update.helper';
 
 @Injectable()
 export class CallbackHandler {
@@ -272,6 +272,7 @@ export class CallbackHandler {
           if (!chatId) return;
           await startProductCreation(
             bot,
+            this.telegramService.getBotToken() || '',
             chatId,
             telegramId,
             language,
@@ -316,6 +317,7 @@ export class CallbackHandler {
           await startProductUpdate(
             bot,
             chatId,
+            this.telegramService.getBotToken() || '',
             telegramId,
             productId,
             language,
@@ -343,7 +345,7 @@ export class CallbackHandler {
           const products = await this.productService.findAll();
           const keyboard = products.map((prod) => [
             {
-              text: language === 'fa' ? prod.name : prod.nameJP || prod.name,
+              text: language === 'fa' ? prod.name : prod.name,
               callback_data: `delete_prod_${prod.id}`,
             },
           ]);

@@ -105,7 +105,7 @@ export class OrderService {
         ?.map((item) =>
           adminLang === 'fa'
             ? `${item.product.name} - ${item.quantity} dona`
-            : `${item.product.nameJP || item.product.name} - ${item.quantity} шт.`,
+            : `${item.product.name} - ${item.quantity} шт.`,
         )
         .join(', ');
 

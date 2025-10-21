@@ -14,7 +14,7 @@ export function formatProductMessage(
       ? '❌ این محصول در انبار موجود نیست.'
       : '❌ This product is out of stock.';
   }
-  const name = language === 'fa' ? product.name : product.nameJP;
+  const name = language === 'fa' ? product.name : product.name;
   const description =
     language === 'fa' ? product.description : product.description;
   return [
@@ -58,7 +58,7 @@ export function formatProductList(
       : '❌ No products in stock.';
   return availableProducts
     .map((prod) => {
-      const name = language === 'fa' ? prod.name : prod.nameJP;
+      const name = language === 'fa' ? prod.name : prod.name;
       const categoryName =
         language === 'fa'
           ? prod.category?.name || 'N/A'
@@ -92,7 +92,7 @@ export function formatFeedbackList(
   return feedbacks
     .map(
       (fb) =>
-        `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${fb.id}, 📦 <b>${language === 'fa' ? 'محصول' : 'Product'}</b>: ${language === 'fa' ? fb.product.name : fb.product.nameJP || fb.product.name}, 👤 <b>${language === 'fa' ? 'کاربر' : 'User'}</b>: ${fb.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, ⭐ <b>${language === 'fa' ? 'امتیاز' : 'Rating'}</b>: ${fb.rating}, 💬 <b>${language === 'fa' ? 'نظر' : 'Comment'}</b>: ${fb.comment}`,
+        `${language === 'fa' ? '📋 <b>شناسه</b>' : '📋 <b>ID</b>'}: ${fb.id}, 📦 <b>${language === 'fa' ? 'محصول' : 'Product'}</b>: ${language === 'fa' ? fb.product.name : fb.product.name || fb.product.name}, 👤 <b>${language === 'fa' ? 'کاربر' : 'User'}</b>: ${fb.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}, ⭐ <b>${language === 'fa' ? 'امتیاز' : 'Rating'}</b>: ${fb.rating}, 💬 <b>${language === 'fa' ? 'نظر' : 'Comment'}</b>: ${fb.comment}`,
     )
     .join('\n');
 }
@@ -110,7 +110,7 @@ export function formatOrderList(
       const items = order.orderItems
         ?.map(
           (item) =>
-            `${language === 'fa' ? item.product.name : item.product.nameJP || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+            `${language === 'fa' ? item.product.name : item.product.name || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
         )
         .join(', ');
       const delivery =

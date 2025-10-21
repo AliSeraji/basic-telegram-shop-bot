@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { CategoryService } from '../category/category.service';
-import { ProductService } from './product.service';
-import { TelegramService } from '../telegram/telegram.service';
-import { getAdminKeyboard } from '../telegram/utils/keyboards';
+import { CategoryService } from '../../category/category.service';
+import { ProductService } from '../product.service';
+import { TelegramService } from '../../telegram/telegram.service';
+import { getAdminKeyboard } from '../../telegram/utils/keyboards';
+import { downloadTelegramPhoto } from './image-handler.helper';
 import TelegramBot = require('node-telegram-bot-api');
 
 const logger = new Logger('ProductCreationHelper');
@@ -10,6 +11,7 @@ const productCreationStates = new Map<string, any>();
 
 export async function startProductCreation(
   bot: TelegramBot,
+  botToken: string,
   chatId: number,
   telegramId: string,
   language: string,
@@ -61,20 +63,65 @@ export async function startProductCreation(
       bot.once('message', async (msgDesc) => {
         const description = msgDesc.text;
 
-        // Step 4: Ask for image URL
+        // Step 4: Ask for image (photo or URL)
         const imageMessage =
           language === 'fa'
-            ? '🖼 لینک تصویر محصول را وارد کنید:'
-            : '🖼 Enter product image URL:';
+            ? '🖼 تصویر محصول را ارسال کنید یا لینک تصویر را وارد کنید:'
+            : '🖼 Send product image or enter image URL:';
         await telegramService.sendMessage(chatId, imageMessage, {
           reply_markup: { force_reply: true },
         });
 
         bot.once('message', async (msgImage) => {
-          const imageUrl = msgImage.text;
+          let imageData: Buffer | null = null;
+          let imageMimeType: string | null = null;
 
-          // Step 5: Show categories and ask to select
           try {
+            // Check if user sent a photo
+            if (msgImage.photo && msgImage.photo.length > 0) {
+              const photo = msgImage.photo[msgImage.photo.length - 1];
+              const fileId = photo.file_id;
+
+              const result = await downloadTelegramPhoto(bot, fileId, 10);
+
+              if ('error' in result) {
+                const errorMessage =
+                  language === 'fa'
+                    ? `❌ خطا در دریافت تصویر: حجم تصویر بیش از 10 مگابایت است.`
+                    : `❌ Error: Image size exceeds 10 MB.`;
+                await telegramService.sendMessage(chatId, errorMessage, {
+                  reply_markup: getAdminKeyboard(language),
+                });
+                return;
+              }
+
+              imageData = result.imageData;
+              imageMimeType = result.imageMimeType;
+            }
+            // Check if user sent a URL
+            else if (msgImage.text) {
+              const errorMessage =
+                language === 'fa'
+                  ? '❌ لطفاً تصویر را مستقیماً ارسال کنید (پشتیبانی از لینک در حال حاضر موجود نیست).'
+                  : '❌ Please send the image directly (URL not supported currently).';
+              await telegramService.sendMessage(chatId, errorMessage, {
+                reply_markup: getAdminKeyboard(language),
+              });
+              return;
+            }
+
+            if (!imageData || !imageMimeType) {
+              const errorMessage =
+                language === 'fa'
+                  ? '❌ خطا در دریافت تصویر. لطفاً دوباره تلاش کنید.'
+                  : '❌ Error getting image. Please try again.';
+              await telegramService.sendMessage(chatId, errorMessage, {
+                reply_markup: getAdminKeyboard(language),
+              });
+              return;
+            }
+
+            // Step 5: Show categories for selection
             const categories = await categoryService.findAll();
             const keyboard = categories.map((cat) => [
               {
@@ -96,14 +143,15 @@ export async function startProductCreation(
               name: name?.trim() || '',
               price,
               description: description?.trim() || '',
-              imageUrl: imageUrl?.trim() || '',
+              imageData,
+              imageMimeType,
             });
           } catch (error) {
-            logger.error(`Error fetching categories: ${error.message}`);
+            logger.error(`Error processing image: ${error.message}`);
             const errorMessage =
               language === 'fa'
-                ? '❌ خطا در دریافت دسته‌بندی‌ها.'
-                : '❌ Error fetching categories.';
+                ? '❌ خطا در پردازش تصویر.'
+                : '❌ Error processing image.';
             await telegramService.sendMessage(chatId, errorMessage, {
               reply_markup: getAdminKeyboard(language),
             });
@@ -165,8 +213,10 @@ export async function handleCategorySelection(
         name: productData.name,
         price: productData.price,
         description: productData.description,
-        imageUrl: productData.imageUrl,
+        imageData: productData.imageData,
+        imageMimeType: productData.imageMimeType,
         categoryId: categoryId,
+        imageUrl: '',
         stock: stock,
         isActive: true,
       });

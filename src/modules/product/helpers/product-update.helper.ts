@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { CategoryService } from '.././category/category.service';
-import { ProductService } from './product.service';
-import { TelegramService } from '.././telegram/telegram.service';
-import { getAdminKeyboard } from '.././telegram/utils/keyboards';
+import { CategoryService } from '../../category/category.service';
+import { ProductService } from '../product.service';
+import { TelegramService } from '../../telegram/telegram.service';
+import { getAdminKeyboard } from '../../telegram/utils/keyboards';
+import { downloadTelegramPhoto } from './image-handler.helper';
 import TelegramBot = require('node-telegram-bot-api');
 
 const logger = new Logger('ProductUpdateHelper');
@@ -16,7 +17,7 @@ export async function showProductsForEdit(
   const products = await productService.findAll();
   const keyboard = products.map((prod) => [
     {
-      text: language === 'fa' ? prod.name : prod.nameJP || prod.name,
+      text: prod.name,
       callback_data: `edit_prod_${prod.id}`,
     },
   ]);
@@ -32,6 +33,7 @@ export async function showProductsForEdit(
 export async function startProductUpdate(
   bot: TelegramBot,
   chatId: number,
+  botToken: string,
   telegramId: string,
   productId: number,
   language: string,
@@ -97,26 +99,76 @@ export async function startProductUpdate(
       bot.once('message', async (msgDesc) => {
         const description = msgDesc.text?.trim() || currentProduct.description;
 
-        // Step 4: Ask for new image URL
+        // Step 4: Ask for new image (photo or URL)
         const imageMessage =
           language === 'fa'
-            ? `🖼 لینک تصویر جدید محصول را وارد کنید:\n\nلینک فعلی: ${currentProduct.imageUrl}`
-            : `🖼 Enter new product image URL:\n\nCurrent: ${currentProduct.imageUrl}`;
+            ? '🖼 تصویر جدید محصول را ارسال کنید یا لینک تصویر را وارد کنید (یا "skip" برای نگه داشتن تصویر فعلی):'
+            : '🖼 Send new product image or enter image URL (or type "skip" to keep current image):';
         await telegramService.sendMessage(chatId, imageMessage, {
           reply_markup: { force_reply: true },
         });
 
         bot.once('message', async (msgImage) => {
-          const imageUrl = msgImage.text?.trim() || currentProduct.imageUrl;
+          let imageData: Buffer | null = currentProduct.imageData;
+          let imageMimeType: string | null = currentProduct.imageMimeType;
 
-          // Step 5: Show categories for selection
           try {
+            // Check if user wants to skip image update
+            if (
+              msgImage.text &&
+              (msgImage.text.toLowerCase().trim() === 'skip' ||
+                msgImage.text.toLowerCase().trim() === 'رد شدن')
+            ) {
+              // Keep current image, do nothing
+            }
+            // Check if user sent a photo
+            else if (msgImage.photo && msgImage.photo.length > 0) {
+              const photo = msgImage.photo[msgImage.photo.length - 1];
+              const fileId = photo.file_id;
+
+              const result = await downloadTelegramPhoto(bot, fileId, 10);
+
+              if ('error' in result) {
+                const errorMessage =
+                  language === 'fa'
+                    ? `❌ خطا در دریافت تصویر: حجم تصویر بیش از 10 مگابایت است. تصویر قبلی حفظ می‌شود.`
+                    : `❌ Error: Image size exceeds 10 MB. Keeping current image.`;
+                await telegramService.sendMessage(chatId, errorMessage);
+                // Keep current image
+              } else {
+                imageData = result.imageData;
+                imageMimeType = result.imageMimeType;
+              }
+            }
+            // Check if user sent a URL
+            else if (msgImage.text) {
+              const text = msgImage.text.trim().toLowerCase();
+
+              if (text === 'skip' || text === 'رد شدن') {
+                // Keep current image
+                imageData = currentProduct.imageData;
+                imageMimeType = currentProduct.imageMimeType;
+              } else {
+                // URL not supported, inform user
+                const errorMessage =
+                  language === 'fa'
+                    ? '❌ لطفاً تصویر را مستقیماً ارسال کنید (پشتیبانی از لینک در حال حاضر موجود نیست). تصویر قبلی حفظ می‌شود.'
+                    : '❌ Please send the image directly (URL not supported currently). Keeping current image.';
+                await telegramService.sendMessage(chatId, errorMessage);
+
+                // Keep current image
+                imageData = currentProduct.imageData;
+                imageMimeType = currentProduct.imageMimeType;
+              }
+            }
+
+            // Step 5: Show categories for selection
             const categories = await categoryService.findAll();
             const keyboard = categories.map((cat) => [
               {
                 text:
-                  (language === 'fa' ? cat.name : cat.nameFa || cat.name) +
-                  (cat.id === currentProduct.category?.id ? ' ✓' : ''), // Changed this line
+                  cat.name +
+                  (cat.id === currentProduct.category?.id ? ' ✓' : ''),
                 callback_data: `update_cat_for_product_${productId}_${cat.id}`,
               },
             ]);
@@ -129,7 +181,7 @@ export async function startProductUpdate(
               reply_markup: { inline_keyboard: keyboard },
             });
 
-            // Store update data temporarily in a Map
+            // Store update data temporarily
             if (!global.productUpdateStates) {
               global.productUpdateStates = new Map();
             }
@@ -138,16 +190,49 @@ export async function startProductUpdate(
               name,
               price,
               description,
-              imageUrl,
+              imageData,
+              imageMimeType,
             });
           } catch (error) {
-            logger.error(`Error fetching categories: ${error.message}`);
+            logger.error(`Error processing image: ${error.message}`);
             const errorMessage =
               language === 'fa'
-                ? '❌ خطا در دریافت دسته‌بندی‌ها.'
-                : '❌ Error fetching categories.';
+                ? '❌ خطا در پردازش تصویر. تصویر قبلی حفظ می‌شود.'
+                : '❌ Error processing image. Keeping current image.';
             await telegramService.sendMessage(chatId, errorMessage, {
               reply_markup: getAdminKeyboard(language),
+            });
+
+            // Store update data with current image
+            if (!global.productUpdateStates) {
+              global.productUpdateStates = new Map();
+            }
+            global.productUpdateStates.set(`${telegramId}_${productId}`, {
+              productId,
+              name,
+              price,
+              description,
+              imageData: currentProduct.imageData,
+              imageMimeType: currentProduct.imageMimeType,
+            });
+
+            // Continue to category selection anyway
+            const categories = await categoryService.findAll();
+            const keyboard = categories.map((cat) => [
+              {
+                text:
+                  cat.name +
+                  (cat.id === currentProduct.category?.id ? ' ✓' : ''),
+                callback_data: `update_cat_for_product_${productId}_${cat.id}`,
+              },
+            ]);
+
+            const categoryMessage =
+              language === 'fa'
+                ? `📁 دسته‌بندی جدید محصول را انتخاب کنید:\n\nدسته‌بندی فعلی: ${currentProduct.category?.name || 'نامشخص'}`
+                : `📁 Select new product category:\n\nCurrent: ${currentProduct.category?.name || 'Unknown'}`;
+            await telegramService.sendMessage(chatId, categoryMessage, {
+              reply_markup: { inline_keyboard: keyboard },
             });
           }
         });
@@ -220,7 +305,8 @@ export async function handleCategorySelectionForUpdate(
         name: updateData.name,
         price: updateData.price,
         description: updateData.description,
-        imageUrl: updateData.imageUrl,
+        imageData: updateData.imageData,
+        imageMimeType: updateData.imageMimeType,
         categoryId: categoryId,
         stock: stock,
       });

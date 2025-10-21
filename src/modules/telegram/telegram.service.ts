@@ -15,6 +15,7 @@ export class TelegramService {
   private logger = new Logger(TelegramService.name);
   private readonly adminTelegramUser: string;
   private userEditStates = new Map<string, { field: string }>();
+  private token?: string;
 
   constructor(
     private configService: ConfigService,
@@ -23,16 +24,16 @@ export class TelegramService {
     private readonly orderService: OrderService,
     private deliveryService: DeliveryService,
   ) {
-    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    this.token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
     this.adminTelegramUser =
       this.configService.get<string>('ADMIN_TELEGRAM_USERNAME') || 'AfineName';
 
-    if (!token) {
+    if (!this.token) {
       this.logger.error('TELEGRAM_BOT_TOKEN is not defined in .env file');
       throw new Error('TELEGRAM_BOT_TOKEN is not defined');
     }
 
-    this.bot = new TelegramBot(token, {
+    this.bot = new TelegramBot(this.token, {
       polling: true,
       request: {
         url: 'https://api.telegram.org',
@@ -43,6 +44,10 @@ export class TelegramService {
     });
 
     this.setupCommands();
+  }
+
+  getBotToken(): string | undefined {
+    return this.token;
   }
 
   private setupCommands() {

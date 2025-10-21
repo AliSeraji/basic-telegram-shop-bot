@@ -18,6 +18,13 @@ export class UpdateProductDto {
   @IsOptional()
   imageUrl?: string;
 
+  @IsOptional()
+  imageData?: Buffer;
+
+  @IsString()
+  @IsOptional()
+  imageMimeType?: string;
+
   @IsNumber()
   @IsPositive()
   @IsOptional()
