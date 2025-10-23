@@ -34,6 +34,15 @@ export class Order {
   @Column({ nullable: true })
   updatedAt: Date;
 
+  @Column({ nullable: true })
+  trackingNumber: string;
+
+  @Column({ type: 'bytea', nullable: true })
+  receiptImage: Buffer;
+
+  @Column({ nullable: true })
+  receiptImageMimeType: string;
+
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems: OrderItem[];
 

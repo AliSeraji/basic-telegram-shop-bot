@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ORDER_STATUS, PAYMENT_TYPE } from '../../../common/constants';
 
 export class UpdateOrderDto {
@@ -9,4 +9,15 @@ export class UpdateOrderDto {
   @IsOptional()
   @IsEnum(PAYMENT_TYPE)
   paymentType?: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
+
+  @IsOptional()
+  @IsString()
+  trackingNumber?: string;
+
+  @IsOptional()
+  receiptImage?: Buffer;
+
+  @IsOptional()
+  @IsString()
+  receiptImageMimeType?: string;
 }

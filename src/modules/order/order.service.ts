@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { UserService } from '../user/user.service';
 import { CartService } from '../cart/cart.service';
@@ -234,7 +233,7 @@ export class OrderService {
     const yearlyStats = {};
     let pendingOrders = 0;
     let validatedPayments = 0;
-    let InvalidatedPayments = 0;
+    let invalidatedPayments = 0;
     let paidOrders = 0;
     let shippedOrders = 0;
     let deliveredOrders = 0;
@@ -257,7 +256,7 @@ export class OrderService {
         validatedPayments++;
         totalAmount += order.totalAmount;
       } else if (order.status === ORDER_STATUS.PAYMENT_INVALIDATED) {
-        InvalidatedPayments++;
+        invalidatedPayments++;
       } else if (order.status === ORDER_STATUS.SHIPPED) {
         shippedOrders++;
         totalAmount += order.totalAmount;

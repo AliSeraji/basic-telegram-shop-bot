@@ -36,13 +36,13 @@ export class CartHandler {
           await this.telegramService.sendMessage(chatId, message);
           return;
         }
-        let message = language === 'fa' ? 'سبد خرید شما:\n' : 'Your cart:\n';
+        let message = language === 'fa' ? 'سبد خرید شما:\n\n' : 'Your cart:\n';
         let total = 0;
         cartItems.forEach((item) => {
           const itemText =
             language === 'fa'
-              ? `${item.product.name} - ${item.quantity} عدد، قیمت: ${item.product.price * item.quantity} تومان\n`
-              : `${item.product.name} - ${item.quantity} pcs., Price: ${item.product.price * item.quantity} sum\n`;
+              ? `${item.product.name} - ${item.quantity} عدد، قیمت: ${item.product.price * item.quantity} تومان\n\n`
+              : `${item.product.name} - ${item.quantity} pcs., Price: ${item.product.price * item.quantity} sum\n\n`;
           message += itemText;
           total += item.product.price * item.quantity;
         });
