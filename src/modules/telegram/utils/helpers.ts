@@ -132,7 +132,6 @@ export function formatOrderList(
         `${language === 'fa' ? '👤 کاربر' : '👤 User'}: ${order.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}`,
         `${language === 'fa' ? '💸 جمع کل' : '💸 Total'}: ${order.totalAmount} تومان`,
         `${language === 'fa' ? '📊 وضعیت' : '📊 Status'}: ${order.status}`,
-        `${language === 'fa' ? '💵 نوع پرداخت' : '💵 Payment type'}: ${order.paymentType || (language === 'fa' ? 'پرداخت نشده' : 'Not paid')}`,
         `${language === 'fa' ? '📦 محصولات' : '📦 Products'}: ${items || 'N/A'}`,
         delivery,
         `━━━━━━━━━━━━━━━`,

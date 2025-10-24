@@ -7,7 +7,13 @@ import TelegramBot = require('node-telegram-bot-api');
 
 const logger = new Logger('OrderPlacementHelper');
 
-// Bank account information - configure this in your .env later
+// Store pending receipt uploads (orderId -> { chatId, telegramId, language })
+const pendingReceipts = new Map<
+  number,
+  { chatId: number; telegramId: string; language: string }
+>();
+
+// Bank account information
 const BANK_ACCOUNT = {
   accountNumber: '1234567890123456',
   accountHolder: 'نام فروشگاه',
@@ -117,55 +123,22 @@ export async function confirmOrderAndRequestPayment(
   cartService: CartService,
 ): Promise<void> {
   try {
-    // Create order
     const order = await orderService.createOrder(telegramId);
-
-    // Clear cart
     await cartService.clearCart(telegramId);
 
-    // Generate tracking number (you can customize this)
     const trackingNumber = `TRK${Date.now()}${order.id}`;
     await orderService.update(order.id, { trackingNumber });
 
-    // Show payment instructions
-    const paymentMessage =
-      language === 'fa'
-        ? `✅ سفارش شما ثبت شد!\n\n` +
-          `📦 کد پیگیری: ${trackingNumber}\n` +
-          `💰 مبلغ قابل پرداخت: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n\n` +
-          `━━━━━━━━━━━━━━━\n` +
-          `💳 اطلاعات حساب:\n` +
-          `🏦 بانک: ${BANK_ACCOUNT.bankName}\n` +
-          `👤 صاحب حساب: ${BANK_ACCOUNT.accountHolder}\n` +
-          `💳 شماره حساب: ${BANK_ACCOUNT.accountNumber}\n` +
-          `💳 شبا: ${BANK_ACCOUNT.iban}\n` +
-          `━━━━━━━━━━━━━━━\n\n` +
-          `📸 لطفاً پس از واریز، عکس رسید را ارسال کنید.`
-        : `✅ Your order has been registered!\n\n` +
-          `📦 Tracking number: ${trackingNumber}\n` +
-          `💰 Amount: ${order.totalAmount.toLocaleString()} Toman\n\n` +
-          `━━━━━━━━━━━━━━━\n` +
-          `💳 Account information:\n` +
-          `🏦 Bank: ${BANK_ACCOUNT.bankName}\n` +
-          `👤 Account holder: ${BANK_ACCOUNT.accountHolder}\n` +
-          `💳 Account number: ${BANK_ACCOUNT.accountNumber}\n` +
-          `💳 IBAN: ${BANK_ACCOUNT.iban}\n` +
-          `━━━━━━━━━━━━━━━\n\n` +
-          `📸 Please send the receipt photo after payment.`;
+    pendingReceipts.set(order.id, { chatId, telegramId, language });
 
-    await telegramService.sendMessage(chatId, paymentMessage);
-
-    // Wait for receipt photo
-    bot.once('photo', async (msg) => {
-      await handleReceiptUpload(
-        bot,
-        msg,
-        order.id,
-        language,
-        telegramService,
-        orderService,
-      );
-    });
+    await showPaymentInstructions(
+      order.id,
+      order.totalAmount,
+      trackingNumber,
+      chatId,
+      language,
+      telegramService,
+    );
   } catch (error) {
     logger.error(`Error in confirmOrderAndRequestPayment: ${error.message}`);
     const message =
@@ -176,27 +149,122 @@ export async function confirmOrderAndRequestPayment(
   }
 }
 
+export async function showPaymentInstructions(
+  orderId: number,
+  totalAmount: number,
+  trackingNumber: string,
+  chatId: number,
+  language: string,
+  telegramService: TelegramService,
+): Promise<void> {
+  const paymentMessage =
+    language === 'fa'
+      ? `✅ سفارش شما ثبت شد!\n\n` +
+        `📦 کد پیگیری: ${trackingNumber}\n` +
+        `💰 مبلغ قابل پرداخت: ${totalAmount.toLocaleString('fa-IR')} تومان\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `💳 اطلاعات حساب:\n` +
+        `🏦 بانک: ${BANK_ACCOUNT.bankName}\n` +
+        `👤 صاحب حساب: ${BANK_ACCOUNT.accountHolder}\n` +
+        `💳 شماره حساب: ${BANK_ACCOUNT.accountNumber}\n` +
+        `💳 شبا: ${BANK_ACCOUNT.iban}\n` +
+        `━━━━━━━━━━━━━━━\n\n` +
+        `📸 لطفاً پس از واریز، عکس رسید را ارسال کنید.\n\n` +
+        `⚠️ فقط عکس رسید واریز را ارسال کنید.`
+      : `✅ Your order has been registered!\n\n` +
+        `📦 Tracking number: ${trackingNumber}\n` +
+        `💰 Amount: ${totalAmount.toLocaleString()} Toman\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `💳 Account information:\n` +
+        `🏦 Bank: ${BANK_ACCOUNT.bankName}\n` +
+        `👤 Account holder: ${BANK_ACCOUNT.accountHolder}\n` +
+        `💳 Account number: ${BANK_ACCOUNT.accountNumber}\n` +
+        `💳 IBAN: ${BANK_ACCOUNT.iban}\n` +
+        `━━━━━━━━━━━━━━━\n\n` +
+        `📸 Please send the receipt photo after payment.\n\n` +
+        `⚠️ Only send the payment receipt photo.`;
+
+  await telegramService.sendMessage(chatId, paymentMessage, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: language === 'fa' ? '📸 آپلود رسید' : '📸 Upload Receipt',
+            callback_data: `upload_receipt_${orderId}`,
+          },
+        ],
+        [
+          {
+            text:
+              language === 'fa'
+                ? '💳 نمایش اطلاعات حساب'
+                : '💳 Show Account Info',
+            callback_data: `show_bank_info_${orderId}`,
+          },
+        ],
+        [
+          {
+            text: language === 'fa' ? '📦 وضعیت سفارش' : '📦 Order Status',
+            callback_data: `check_order_status_${orderId}`,
+          },
+        ],
+      ],
+    },
+  });
+}
+
 export async function handleReceiptUpload(
   bot: TelegramBot,
   msg: TelegramBot.Message,
-  orderId: number,
-  language: string,
-  telegramService: TelegramService,
   orderService: OrderService,
+  telegramService: TelegramService,
+  userService: UserService,
 ): Promise<void> {
   try {
     const chatId = msg.chat.id;
+    const telegramId = msg.from?.id.toString() || '';
 
-    if (!msg.photo || msg.photo.length === 0) {
+    let orderId: number | null = null;
+    let language = 'fa';
+
+    for (const [oid, info] of pendingReceipts.entries()) {
+      if (info.telegramId === telegramId) {
+        orderId = oid;
+        language = info.language;
+        break;
+      }
+    }
+
+    if (!orderId) {
       const message =
         language === 'fa'
-          ? '❌ لطفاً عکس رسید را ارسال کنید.'
-          : '❌ Please send the receipt photo.';
+          ? '❌ سفارشی برای آپلود رسید یافت نشد. لطفاً ابتدا سفارش خود را ثبت کنید.'
+          : '❌ No order found for receipt upload. Please place an order first.';
       await telegramService.sendMessage(chatId, message);
       return;
     }
 
-    // Get the highest resolution photo
+    if (!msg.photo || msg.photo.length === 0) {
+      const message =
+        language === 'fa'
+          ? '❌ لطفاً فقط عکس رسید را ارسال کنید.\n\nاگر می‌خواهید رسید را مجدداً ارسال کنید، از دکمه زیر استفاده کنید.'
+          : '❌ Please send only the receipt photo.\n\nIf you want to resend the receipt, use the button below.';
+
+      await telegramService.sendMessage(chatId, message, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: language === 'fa' ? '📸 آپلود رسید' : '📸 Upload Receipt',
+                callback_data: `upload_receipt_${orderId}`,
+              },
+            ],
+          ],
+        },
+      });
+      return;
+    }
+
     const photo = msg.photo[msg.photo.length - 1];
     const fileId = photo.file_id;
 
@@ -211,61 +279,45 @@ export async function handleReceiptUpload(
 
     const receiptImage = Buffer.concat(chunks);
 
-    // Save receipt to order
     await orderService.update(orderId, {
       receiptImage,
       receiptImageMimeType: 'image/jpeg',
     });
 
+    pendingReceipts.delete(orderId);
+
+    const order = await orderService.findOne(orderId);
+
     const successMessage =
       language === 'fa'
         ? `✅ رسید شما دریافت شد!\n\n` +
+          `📦 کد پیگیری: ${order.trackingNumber}\n\n` +
           `سفارش شما در حال بررسی است و پس از تایید پرداخت، به شما اطلاع داده خواهد شد.\n\n` +
           `از خرید شما متشکریم! 🙏`
         : `✅ Receipt received!\n\n` +
+          `📦 Tracking number: ${order.trackingNumber}\n\n` +
           `Your order is being reviewed and you will be notified after payment confirmation.\n\n` +
           `Thank you for your purchase! 🙏`;
 
     await telegramService.sendMessage(chatId, successMessage);
 
-    // Notify admins
-    const order = await orderService.findOne(orderId);
-    const adminMessage =
-      `🔔 سفارش جدید دریافت شد!\n\n` +
-      `📦 شناسه سفارش: ${order.id}\n` +
-      `👤 کاربر: ${order.user?.fullName || 'نامشخص'}\n` +
-      `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
-      `📋 کد پیگیری: ${order.trackingNumber}\n\n` +
-      `لطفاً رسید را بررسی و تایید کنید.`;
-
-    // Send receipt to admins
-    const userService = orderService['userService']; // Access injected service
-    const admins = await userService.findAllAdmins();
-    for (const admin of admins) {
-      await bot.sendPhoto(admin.telegramId, receiptImage, {
-        caption: adminMessage,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: '✅ تایید پرداخت',
-                callback_data: `approve_payment_${orderId}`,
-              },
-              {
-                text: '❌ رد پرداخت',
-                callback_data: `reject_payment_${orderId}`,
-              },
-            ],
-          ],
-        },
-      });
-    }
+    await orderService.notifyAdminsOfNewOrder(bot, orderId, receiptImage);
   } catch (error) {
     logger.error(`Error in handleReceiptUpload: ${error.message}`);
-    const message =
-      language === 'fa'
-        ? '❌ خطایی در آپلود رسید رخ داد.'
-        : '❌ Error uploading receipt.';
+    const message = '❌ خطایی در آپلود رسید رخ داد.';
     await telegramService.sendMessage(msg.chat.id, message);
   }
+}
+
+export function getPendingReceiptInfo(orderId: number) {
+  return pendingReceipts.get(orderId);
+}
+
+export function hasPendingReceipt(telegramId: string): boolean {
+  for (const info of pendingReceipts.values()) {
+    if (info.telegramId === telegramId) {
+      return true;
+    }
+  }
+  return false;
 }

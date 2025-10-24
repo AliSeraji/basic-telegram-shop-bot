@@ -9,7 +9,7 @@ import { User } from '../user/user.entity';
 import { OrderItem } from './order-item.entity';
 import { Payment } from '../payment/payment.entity';
 import { Delivery } from '../delivery/delivery.entity';
-import { ORDER_STATUS, PAYMENT_TYPE } from '../../common/constants';
+import { ORDER_STATUS } from '../../common/constants';
 
 @Entity()
 export class Order {
@@ -24,9 +24,6 @@ export class Order {
 
   @Column({ type: 'enum', enum: ORDER_STATUS })
   status: (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
-
-  @Column({ type: 'enum', enum: PAYMENT_TYPE, nullable: true })
-  paymentType: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE] | null;
 
   @Column()
   createdAt: Date;

@@ -8,6 +8,10 @@ import { getMainKeyboard } from './utils/keyboards';
 
 import TelegramBot = require('node-telegram-bot-api');
 import { profileMessage } from './constants';
+import {
+  handleReceiptUpload,
+  hasPendingReceipt,
+} from '../order/helper/order-placement.helper';
 
 @Injectable()
 export class TelegramService {
@@ -56,18 +60,34 @@ export class TelegramService {
       const text = msg.text;
       const telegramId = msg.from?.id.toString();
 
+      if (msg.photo && msg.photo.length > 0 && telegramId) {
+        if (hasPendingReceipt(telegramId)) {
+          await handleReceiptUpload(
+            this.bot,
+            msg,
+            this.orderService,
+            this,
+            this.userService,
+          );
+          return;
+        }
+      }
+
       if (text) {
         this.logger.log(`[DIAGNOSTIC] Received text: ${text} from ${chatId}`);
       }
 
-      // Handle profile editing states
       if (telegramId && this.userEditStates.has(telegramId)) {
         const state = this.userEditStates.get(telegramId);
 
-        // Check state immediately after getting it
         if (!state || !text) return;
 
-        const validProfileFields = ['fullName', 'phone', 'email', 'address'];
+        const validProfileFields = [
+          'fullName',
+          'phone',
+          'email',
+          'userAddress',
+        ];
         if (!validProfileFields.includes(state.field)) {
           return;
         }
@@ -76,7 +96,6 @@ export class TelegramService {
           const user = await this.userService.findByTelegramId(telegramId);
           const language = user.language || 'fa';
 
-          // Update the specific field
           const updateData: any = {};
           updateData[state.field] = text;
 
@@ -98,7 +117,6 @@ export class TelegramService {
             reply_markup: getMainKeyboard(false, language),
           });
 
-          // Clear the state
           this.userEditStates.delete(telegramId);
         } catch (error) {
           this.logger.error(`Error updating profile: ${error.message}`);
@@ -112,7 +130,7 @@ export class TelegramService {
           await this.bot.sendMessage(chatId, errorMessage);
           this.userEditStates.delete(telegramId);
         }
-        return; // Don't process other handlers
+        return;
       }
     });
 
@@ -187,7 +205,6 @@ export class TelegramService {
       }
     });
 
-    // Handle profile edit callbacks
     this.bot.on('callback_query', async (query) => {
       if (!query.data?.startsWith('edit_')) return;
       if (!query.message?.chat?.id || !query.from) return;
@@ -219,7 +236,6 @@ export class TelegramService {
               : '📍 Enter your address:',
         };
 
-        // Set the edit state
         this.userEditStates.set(telegramId, { field });
 
         await this.bot.sendMessage(chatId, prompts[field], {
@@ -233,7 +249,6 @@ export class TelegramService {
       }
     });
 
-    // Handle return to main menu
     this.bot.on('callback_query', async (query) => {
       if (query.data !== 'return_to_main_menu') return;
       if (!query.message?.chat?.id || !query.from) return;
@@ -242,7 +257,6 @@ export class TelegramService {
       const telegramId = query.from.id.toString();
 
       try {
-        // Clear any edit state
         this.userEditStates.delete(telegramId);
 
         const user = await this.userService.findByTelegramId(telegramId);
@@ -270,17 +284,58 @@ export class TelegramService {
       try {
         const user = await this.userService.findByTelegramId(telegramId);
         const language = user.language || 'fa';
-        const orders = await this.orderService.getUserOrders(telegramId);
+        const page = 1;
+        const limit = 10;
+
+        const orders = await this.orderService.getUserOrders(
+          telegramId,
+          page,
+          limit,
+        );
+
+        const totalPages = Math.ceil(orders.length / limit);
+
         const message = orders.length
           ? formatOrderList(orders, language)
           : language === 'fa'
             ? 'هیچ سفارشی موجود نیست'
             : 'No orders';
+
+        const inlineKeyboard: TelegramBot.InlineKeyboardButton[][] = [];
+
+        // Add pagination buttons if needed
+        if (totalPages > 1) {
+          const navButtons: TelegramBot.InlineKeyboardButton[] = [];
+
+          if (page > 1) {
+            navButtons.push({
+              text: language === 'fa' ? '◀️ قبلی' : '◀️ Previous',
+              callback_data: `user_view_orders_${page - 1}`,
+            });
+          }
+
+          navButtons.push({
+            text: `${page}/${totalPages}`,
+            callback_data: 'noop',
+          });
+
+          if (page < totalPages) {
+            navButtons.push({
+              text: language === 'fa' ? 'بعدی ▶️' : 'Next ▶️',
+              callback_data: `user_view_orders_${page + 1}`,
+            });
+          }
+
+          inlineKeyboard.push(navButtons);
+        }
+
         await this.bot.sendMessage(
           chatId,
-          `${language === 'fa' ? '🕘 تاریخچه سفارشات' : '🕘 Order history'}\n${message}`,
+          `${language === 'fa' ? '🕘 تاریخچه سفارشات' : '🕘 Order history'}\n\n${message}`,
           {
-            reply_markup: getMainKeyboard(false, language),
+            reply_markup: {
+              inline_keyboard: inlineKeyboard,
+            },
           },
         );
       } catch (error) {

@@ -8,18 +8,6 @@ export const ORDER_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
-export const PAYMENT_STATUS = {
-  PENDING: 'pending',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  REFUNDED: 'refunded',
-} as const;
-
-export const PAYMENT_TYPE = {
-  CLICK: 'click',
-  CARD: 'card',
-} as const;
-
 export const DELIVERY_STATUS = {
   PENDING: 'pending',
   IN_TRANSIT: 'in_transit',

@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { Order } from '../order/order.entity';
-import { PAYMENT_TYPE } from '../../common/constants';
 
 @Entity()
 export class Payment {
@@ -9,9 +8,6 @@ export class Payment {
 
   @ManyToOne(() => Order, (order) => order.payments, { onDelete: 'CASCADE' })
   order: Order;
-
-  @Column({ type: 'enum', enum: PAYMENT_TYPE })
-  paymentType: (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE];
 
   @Column()
   amount: number;

@@ -80,6 +80,7 @@ export class CallbackHandler {
       'edit_email',
       'edit_address',
       'return_to_main_menu',
+      'edit_user_info',
     ];
 
     const isAdmin =

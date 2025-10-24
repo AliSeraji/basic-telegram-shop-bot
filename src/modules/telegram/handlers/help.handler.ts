@@ -7,7 +7,7 @@ import { getMainKeyboard } from '../utils/keyboards';
 @Injectable()
 export class HelpHandler {
   private logger = new Logger(HelpHandler.name);
-  private activeHelpSessions = new Set<string>(); // Track active help sessions
+  private activeHelpSessions = new Set<string>();
 
   constructor(
     private telegramService: TelegramService,
@@ -78,7 +78,7 @@ export class HelpHandler {
             replyMsg.text?.includes('ℹ️') ||
             replyMsg.text?.includes('🆘')
           ) {
-            this.activeHelpSessions.delete(telegramId); // End session
+            this.activeHelpSessions.delete(telegramId);
             return;
           }
 

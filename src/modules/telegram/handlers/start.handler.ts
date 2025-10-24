@@ -23,14 +23,12 @@ export class StartHandler {
       const fullName =
         `${msg.from?.first_name} ${msg.from.last_name || ''}`.trim();
 
-      // Register user with Persian as default language
       let user = await this.userService.registerUser({
         telegramId,
         fullName,
-        language: 'fa', // Always set to Persian
+        language: 'fa',
       });
 
-      // If user doesn't have language set, set it to Persian
       if (!user.language) {
         await this.userService.updateLanguage(telegramId, 'fa');
         user = await this.userService.findByTelegramId(telegramId);
@@ -38,7 +36,7 @@ export class StartHandler {
 
       await this.telegramService.sendMessage(chatId, startMessage(fullName), {
         parse_mode: 'HTML',
-        reply_markup: getMainKeyboard(false, 'fa'), // Always Persian, never force phone
+        reply_markup: getMainKeyboard(false, 'fa'),
       });
     });
   }

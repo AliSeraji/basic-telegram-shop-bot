@@ -15,6 +15,7 @@ import { CartService } from '../cart/cart.service';
 import { ProductService } from '../product/product.service';
 import { ORDER_STATUS } from '../../common/constants';
 import { TelegramService } from '../telegram/telegram.service';
+import TelegramBot from 'node-telegram-bot-api';
 
 @Injectable()
 export class OrderService {
@@ -50,7 +51,6 @@ export class OrderService {
       user,
       totalAmount: 0,
       status: ORDER_STATUS.PENDING,
-      paymentType: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -90,13 +90,51 @@ export class OrderService {
     await this.orderRepository.save(savedOrder);
 
     await this.cartService.clearCart(telegramId);
-    await this.notifyAdminOrderCreated(savedOrder, user);
+    //await this.notifyAdminOrderCreated(savedOrder, user);
 
     return savedOrder;
   }
 
+  async notifyAdminsOfNewOrder(
+    bot: TelegramBot,
+    orderId: number,
+    receiptImage: Buffer,
+  ): Promise<void> {
+    const order = await this.findOne(orderId);
+
+    const adminMessage =
+      `🔔 سفارش جدید دریافت شد!\n\n` +
+      `📦 شناسه سفارش: ${order.id}\n` +
+      `👤 کاربر: ${order.user?.fullName || 'نامشخص'}\n` +
+      `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
+      `📋 کد پیگیری: ${order.trackingNumber}\n\n` +
+      `لطفاً رسید را بررسی و تایید کنید.`;
+
+    const admins = await this.userService.findAllAdmins();
+
+    for (const admin of admins) {
+      await bot.sendPhoto(admin.telegramId, receiptImage, {
+        caption: adminMessage,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '✅ تایید پرداخت',
+                callback_data: `approve_payment_${orderId}`,
+              },
+              {
+                text: '❌ رد پرداخت',
+                callback_data: `reject_payment_${orderId}`,
+              },
+            ],
+          ],
+        },
+      });
+    }
+  }
+
   async notifyAdminOrderCreated(order: Order, user: any) {
-    const admins = await this.userService.findAllAdmins(); // isAdmin=true bo‘lganlar
+    const admins = await this.userService.findAllAdmins();
 
     for (const admin of admins) {
       const adminLang = admin.language || 'fa';

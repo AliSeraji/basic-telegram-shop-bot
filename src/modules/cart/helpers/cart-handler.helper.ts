@@ -34,7 +34,7 @@ export async function handleAddToCart(
       return;
     }
 
-    const maxQuantity = Math.min(product.stock, 10); // Limit to 10 or stock amount
+    const maxQuantity = Math.min(product.stock, 10);
     const keyboard: Array<Array<{ text: string; callback_data: string }>> = [];
 
     for (let i = 1; i <= maxQuantity; i += 5) {
@@ -121,7 +121,7 @@ export async function handleAddQuantityToCart(
           [
             {
               text: language === 'fa' ? '🛒 مشاهده سبد خرید' : '🛒 View Cart',
-              callback_data: 'view_cart',
+              callback_data: '🛒 سبد خرید',
             },
             {
               text:

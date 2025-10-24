@@ -16,7 +16,6 @@ export class CategoriesHandler {
   handle() {
     const bot = this.telegramService.getBotInstance();
 
-    // Show categories when user clicks the button
     bot.onText(/📁 (لیست محصولات|Categories)/, async (msg) => {
       if (!msg.from) return;
       const chatId = msg.chat.id;
@@ -24,7 +23,6 @@ export class CategoriesHandler {
       await this.showCategories(chatId, telegramId);
     });
 
-    // Handle "back to categories" callback
     bot.on('callback_query', async (query) => {
       if (!query.data || !query.data.startsWith('back_to_categories')) return;
       if (!query.message?.chat?.id || !query.from) return;
@@ -42,7 +40,6 @@ export class CategoriesHandler {
     });
   }
 
-  // Helper method to show categories (reusable)
   private async showCategories(chatId: number, telegramId: string) {
     try {
       const user = await this.userService.findByTelegramId(telegramId);

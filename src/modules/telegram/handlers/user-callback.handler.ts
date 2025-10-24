@@ -17,8 +17,11 @@ import {
 } from 'src/modules/cart/helpers/cart-handler.helper';
 import {
   confirmOrderAndRequestPayment,
+  getPendingReceiptInfo,
+  showPaymentInstructions,
   startOrderPlacement,
 } from 'src/modules/order/helper/order-placement.helper';
+import { ORDER_STATUS } from 'src/common/constants';
 
 @Injectable()
 export class UserCallbackHandler {
@@ -139,8 +142,7 @@ export class UserCallbackHandler {
               : '❌ Add to cart cancelled.';
           await this.telegramService.sendMessage(chatId, message);
           await bot.answerCallbackQuery(query.id);
-        } // Replace the entire 'place_order' handler with:
-        else if (data === 'place_order') {
+        } else if (data === 'place_order') {
           await bot.answerCallbackQuery(query.id);
           await startOrderPlacement(
             bot,
@@ -177,7 +179,10 @@ export class UserCallbackHandler {
           await this.telegramService.sendMessage(chatId, message);
         } else if (data?.startsWith('approve_payment_')) {
           const orderId = parseInt(data.split('_')[2]);
-          await this.orderService.updateStatus(orderId, 'paid');
+          await this.orderService.updateStatus(
+            orderId,
+            ORDER_STATUS.PAYMENT_VALIDATED,
+          );
 
           const order = await this.orderService.findOne(orderId);
           const userMessage =
@@ -205,6 +210,101 @@ export class UserCallbackHandler {
             userMessage,
           );
           await this.telegramService.sendMessage(chatId, '❌ پرداخت رد شد.');
+          await bot.answerCallbackQuery(query.id);
+        } else if (data?.startsWith('upload_receipt_')) {
+          const orderId = parseInt(data.split('_')[2]);
+          const pendingInfo = getPendingReceiptInfo(orderId);
+
+          if (!pendingInfo) {
+            const message =
+              language === 'fa'
+                ? '❌ سفارش یافت نشد یا منقضی شده است.'
+                : '❌ Order not found or expired.';
+            await this.telegramService.sendMessage(chatId, message);
+            await bot.answerCallbackQuery(query.id);
+            return;
+          }
+
+          const order = await this.orderService.findOne(orderId);
+          const instructionMessage =
+            language === 'fa'
+              ? `📸 لطفاً عکس رسید پرداخت را ارسال کنید.\n\n` +
+                `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
+                `📦 کد پیگیری: ${order.trackingNumber}\n\n` +
+                `⚠️ توجه: فقط یک عکس واضح از رسید ارسال کنید.`
+              : `📸 Please send the payment receipt photo.\n\n` +
+                `💰 Amount: ${order.totalAmount.toLocaleString()} Toman\n` +
+                `📦 Tracking: ${order.trackingNumber}\n\n` +
+                `⚠️ Note: Send only one clear photo of the receipt.`;
+
+          await this.telegramService.sendMessage(chatId, instructionMessage);
+          await bot.answerCallbackQuery(query.id, {
+            text:
+              language === 'fa'
+                ? 'لطفاً عکس رسید را ارسال کنید'
+                : 'Please send receipt photo',
+          });
+        } else if (data?.startsWith('show_bank_info_')) {
+          const orderId = parseInt(data.split('_')[3]);
+          const order = await this.orderService.findOne(orderId);
+
+          await showPaymentInstructions(
+            orderId,
+            order.totalAmount,
+            order.trackingNumber,
+            chatId,
+            language,
+            this.telegramService,
+          );
+          await bot.answerCallbackQuery(query.id);
+        } else if (data?.startsWith('check_order_status_')) {
+          const orderId = parseInt(data.split('_')[3]);
+          const order = await this.orderService.findOne(orderId);
+
+          const statusMessage =
+            language === 'fa'
+              ? `📦 وضعیت سفارش\n\n` +
+                `🔢 شناسه: ${order.id}\n` +
+                `📋 کد پیگیری: ${order.trackingNumber}\n` +
+                `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
+                `📊 وضعیت: ${
+                  order.status === ORDER_STATUS.PENDING
+                    ? '⏳ در انتظار پرداخت'
+                    : order.status === ORDER_STATUS.PAID
+                      ? '✅ پرداخت شده'
+                      : order.status === ORDER_STATUS.SHIPPED
+                        ? '🚚 ارسال شده'
+                        : order.status === ORDER_STATUS.DELIVERED
+                          ? '✅ تحویل داده شده'
+                          : order.status
+                }\n\n` +
+                (order.receiptImage ? '✅ رسید دریافت شد' : '⏳ در انتظار رسید')
+              : `📦 Order Status\n\n` +
+                `🔢 ID: ${order.id}\n` +
+                `📋 Tracking: ${order.trackingNumber}\n` +
+                `💰 Amount: ${order.totalAmount.toLocaleString()} Toman\n` +
+                `📊 Status: ${order.status}\n\n` +
+                (order.receiptImage
+                  ? '✅ Receipt received'
+                  : '⏳ Waiting for receipt');
+
+          await this.telegramService.sendMessage(chatId, statusMessage, {
+            reply_markup: {
+              inline_keyboard: order.receiptImage
+                ? []
+                : [
+                    [
+                      {
+                        text:
+                          language === 'fa'
+                            ? '📸 آپلود رسید'
+                            : '📸 Upload Receipt',
+                        callback_data: `upload_receipt_${orderId}`,
+                      },
+                    ],
+                  ],
+            },
+          });
           await bot.answerCallbackQuery(query.id);
         } else if (data?.startsWith('feedback_')) {
           const productId = parseInt(data.split('_')[1]);
@@ -265,7 +365,7 @@ export class UserCallbackHandler {
           const message =
             language === 'fa' ? '🗑 سبد خرید پاک شد.' : '🗑 Cart cleared.';
           await this.telegramService.sendMessage(chatId, message, {});
-        } else if (data?.startsWith('view_orders_')) {
+        } else if (data?.startsWith('user_view_orders_')) {
           const page = parseInt(data.split('_')[2]) || 1;
           const orders = await this.orderService.getUserOrders(
             telegramId,
@@ -277,7 +377,7 @@ export class UserCallbackHandler {
             keyboard.push([
               {
                 text: language === 'fa' ? '➡️ صفحه بعدی' : '➡️ Next page',
-                callback_data: `view_orders_${page + 1}`,
+                callback_data: `user_view_orders_${page + 1}`,
               },
             ]);
           }
@@ -285,7 +385,7 @@ export class UserCallbackHandler {
             keyboard.push([
               {
                 text: language === 'fa' ? '⬅️ صفحه قبلی' : '⬅️ Previous page',
-                callback_data: `view_orders_${page - 1}`,
+                callback_data: `user_view_orders_${page - 1}`,
               },
             ]);
           }
