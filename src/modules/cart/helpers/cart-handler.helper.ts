@@ -121,7 +121,7 @@ export async function handleAddQuantityToCart(
           [
             {
               text: language === 'fa' ? '🛒 مشاهده سبد خرید' : '🛒 View Cart',
-              callback_data: '🛒 سبد خرید',
+              callback_data: 'view_cart',
             },
             {
               text:

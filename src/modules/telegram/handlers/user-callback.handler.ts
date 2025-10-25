@@ -1,11 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as TelegramBot from 'node-telegram-bot-api';
-import { CategoryService } from '../../category/category.service';
 import { ProductService } from '../../product/product.service';
 import { CartService } from '../../cart/cart.service';
 import { OrderService } from '../../order/order.service';
 import { FeedbackService } from '../../feedback/feedback.service';
-import { PaymentService } from '../../payment/payment.service';
 import { UserService } from '../../user/user.service';
 import { DeliveryService } from '../../delivery/delivery.service';
 import { TelegramService } from '../telegram.service';
@@ -22,21 +20,21 @@ import {
   startOrderPlacement,
 } from 'src/modules/order/helper/order-placement.helper';
 import { ORDER_STATUS } from 'src/common/constants';
+import { CartHandler } from './cart.handler';
 
 @Injectable()
 export class UserCallbackHandler {
   private logger = new Logger(UserCallbackHandler.name);
 
   constructor(
-    private categoryService: CategoryService,
     private productService: ProductService,
     private cartService: CartService,
     private orderService: OrderService,
     private feedbackService: FeedbackService,
-    private paymentService: PaymentService,
     private userService: UserService,
     private deliveryService: DeliveryService,
     private telegramService: TelegramService,
+    private cartHandler: CartHandler,
   ) {}
 
   handle() {
@@ -366,37 +364,63 @@ export class UserCallbackHandler {
             language === 'fa' ? '🗑 سبد خرید پاک شد.' : '🗑 Cart cleared.';
           await this.telegramService.sendMessage(chatId, message, {});
         } else if (data?.startsWith('user_view_orders_')) {
-          const page = parseInt(data.split('_')[2]) || 1;
+          const page = parseInt(data.split('_')[3]) || 1;
+          const limit = 10;
+
           const orders = await this.orderService.getUserOrders(
             telegramId,
             page,
-            10,
+            limit,
           );
+          const total = await this.orderService.getUserOrdersCount(telegramId);
+
+          const totalPages = Math.ceil(total / limit);
           const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
-          if (orders.length === 10) {
-            keyboard.push([
-              {
-                text: language === 'fa' ? '➡️ صفحه بعدی' : '➡️ Next page',
-                callback_data: `user_view_orders_${page + 1}`,
-              },
-            ]);
-          }
-          if (page > 1) {
-            keyboard.push([
-              {
-                text: language === 'fa' ? '⬅️ صفحه قبلی' : '⬅️ Previous page',
+
+          if (totalPages > 1) {
+            const navButtons: TelegramBot.InlineKeyboardButton[] = [];
+
+            if (page > 1) {
+              navButtons.push({
+                text: language === 'fa' ? '◀️ قبلی' : '◀️ Previous',
                 callback_data: `user_view_orders_${page - 1}`,
-              },
-            ]);
+              });
+            }
+
+            navButtons.push({
+              text: `${page}/${totalPages}`,
+              callback_data: 'noop',
+            });
+
+            if (page < totalPages) {
+              navButtons.push({
+                text: language === 'fa' ? 'بعدی ▶️' : 'Next ▶️',
+                callback_data: `user_view_orders_${page + 1}`,
+              });
+            }
+
+            keyboard.push(navButtons);
           }
-          await this.telegramService.sendMessage(
+
+          const message = orders.length
+            ? formatOrderList(orders, language)
+            : language === 'fa'
+              ? 'هیچ سفارشی موجود نیست'
+              : 'No orders';
+
+          await this.telegramService.editMessageAndAnswer(
+            query.id,
             chatId,
-            formatOrderList(orders, language),
+            query.message.message_id,
+            message,
             {
               reply_markup: { inline_keyboard: keyboard },
               parse_mode: 'HTML',
             },
           );
+        } else if (data === 'view_cart') {
+          await bot.answerCallbackQuery(query.id);
+          await this.cartHandler.displayCart(chatId, telegramId, language);
         }
       } catch (error) {
         this.logger.error(`Error in user callback: ${error.message}`);

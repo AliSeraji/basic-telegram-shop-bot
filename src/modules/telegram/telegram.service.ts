@@ -292,18 +292,12 @@ export class TelegramService {
           page,
           limit,
         );
+        const total = await this.orderService.getUserOrdersCount(telegramId);
 
-        const totalPages = Math.ceil(orders.length / limit);
+        const totalPages = Math.ceil(total / limit);
+        const keyboard: TelegramBot.InlineKeyboardButton[][] = [];
 
-        const message = orders.length
-          ? formatOrderList(orders, language)
-          : language === 'fa'
-            ? 'هیچ سفارشی موجود نیست'
-            : 'No orders';
-
-        const inlineKeyboard: TelegramBot.InlineKeyboardButton[][] = [];
-
-        // Add pagination buttons if needed
+        // Add pagination buttons if there's more than one page
         if (totalPages > 1) {
           const navButtons: TelegramBot.InlineKeyboardButton[] = [];
 
@@ -326,15 +320,21 @@ export class TelegramService {
             });
           }
 
-          inlineKeyboard.push(navButtons);
+          keyboard.push(navButtons);
         }
+
+        const message = orders.length
+          ? formatOrderList(orders, language)
+          : language === 'fa'
+            ? 'هیچ سفارشی موجود نیست'
+            : 'No orders';
 
         await this.bot.sendMessage(
           chatId,
           `${language === 'fa' ? '🕘 تاریخچه سفارشات' : '🕘 Order history'}\n\n${message}`,
           {
             reply_markup: {
-              inline_keyboard: inlineKeyboard,
+              inline_keyboard: keyboard,
             },
           },
         );
@@ -445,5 +445,30 @@ export class TelegramService {
       );
       throw error;
     }
+  }
+
+  async editMessageAndAnswer(
+    callbackQueryId: string,
+    chatId: number,
+    messageId: number,
+    text: string,
+    options?: {
+      reply_markup?: TelegramBot.InlineKeyboardMarkup;
+      parse_mode?: 'HTML' | 'Markdown';
+      callback_text?: string;
+      show_alert?: boolean;
+    },
+  ): Promise<void> {
+    await this.bot.editMessageText(text, {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: options?.reply_markup,
+      parse_mode: options?.parse_mode,
+    });
+
+    await this.bot.answerCallbackQuery(callbackQueryId, {
+      text: options?.callback_text,
+      show_alert: options?.show_alert,
+    });
   }
 }

@@ -248,6 +248,12 @@ export class OrderService {
     return this.orderRepository.save(order);
   }
 
+  async getUserOrdersCount(telegramId: string): Promise<number> {
+    return await this.orderRepository.count({
+      where: { user: { telegramId } },
+    });
+  }
+
   async getStats(): Promise<{
     totalOrders: number;
     totalAmount: number;
