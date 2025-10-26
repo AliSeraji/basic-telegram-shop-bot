@@ -8,6 +8,16 @@ export const ORDER_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
+export const ORDERSTATTEXT = {
+  PENDING: 'در انتظار',
+  PAID: 'پرداخت شده',
+  PAYMENT_VALIDATED: 'پرداخت تایید شده',
+  PAYMENT_INVALIDATED: 'پرداخت نامعتبر',
+  SHIPPED: 'ارسال شده',
+  DELIVERED: 'تحویل داده شده',
+  CANCELLED: 'لغو شده',
+};
+
 export const DELIVERY_STATUS = {
   PENDING: 'pending',
   IN_TRANSIT: 'in_transit',

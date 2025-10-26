@@ -4,6 +4,7 @@ import { Order } from '../../order/order.entity';
 import { Product } from '../../product/product.entity';
 import { User } from '../../user/user.entity';
 import { Delivery } from '../../delivery/delivery.entity';
+import { ORDER_STATUS, ORDERSTATTEXT } from 'src/common/constants';
 
 export function formatProductMessage(
   product: Product,
@@ -131,7 +132,7 @@ export function formatOrderList(
         `${language === 'fa' ? '📋 سفارش' : '📋 Order'} #${order.id}`,
         `${language === 'fa' ? '👤 کاربر' : '👤 User'}: ${order.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}`,
         `${language === 'fa' ? '💸 جمع کل' : '💸 Total'}: ${order.totalAmount} تومان`,
-        `${language === 'fa' ? '📊 وضعیت' : '📊 Status'}: ${order.status}`,
+        `${language === 'fa' ? '📊 وضعیت' : '📊 Status'}: ${getOrderStatusText(order.status)}`,
         `${language === 'fa' ? '📦 محصولات' : '📦 Products'}: ${items || 'N/A'}`,
         delivery,
         `━━━━━━━━━━━━━━━`,
@@ -200,3 +201,19 @@ export function formatStats(stats: any, language: string = 'fa'): string {
     `━━━━━━━━━━━━━━━`,
   ].join('\n');
 }
+
+type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
+
+const getOrderStatusText = (status: OrderStatus): string => {
+  const statusMap: Record<OrderStatus, string> = {
+    [ORDER_STATUS.PENDING]: ORDERSTATTEXT.PENDING,
+    [ORDER_STATUS.PAID]: ORDERSTATTEXT.PAID,
+    [ORDER_STATUS.PAYMENT_VALIDATED]: ORDERSTATTEXT.PAYMENT_VALIDATED,
+    [ORDER_STATUS.PAYMENT_INVALIDATED]: ORDERSTATTEXT.PAYMENT_INVALIDATED,
+    [ORDER_STATUS.SHIPPED]: ORDERSTATTEXT.SHIPPED,
+    [ORDER_STATUS.DELIVERED]: ORDERSTATTEXT.DELIVERED,
+    [ORDER_STATUS.CANCELLED]: ORDERSTATTEXT.CANCELLED,
+  };
+
+  return statusMap[status];
+};
