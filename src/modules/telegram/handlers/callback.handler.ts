@@ -493,8 +493,10 @@ export class CallbackHandler {
               },
             ]);
           }
-          await this.telegramService.sendMessage(
+          await this.telegramService.editMessageAndAnswer(
+            query.id,
             chatId,
+            query.message.message_id,
             formatOrderList(orders, language),
             {
               reply_markup: { inline_keyboard: keyboard },
