@@ -62,13 +62,7 @@ export class TelegramService {
 
       if (msg.photo && msg.photo.length > 0 && telegramId) {
         if (hasPendingReceipt(telegramId)) {
-          await handleReceiptUpload(
-            this.bot,
-            msg,
-            this.orderService,
-            this,
-            this.userService,
-          );
+          await handleReceiptUpload(this.bot, msg, this.orderService, this);
           return;
         }
       }

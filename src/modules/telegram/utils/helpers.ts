@@ -204,7 +204,7 @@ export function formatStats(stats: any, language: string = 'fa'): string {
 
 type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
 
-const getOrderStatusText = (status: OrderStatus): string => {
+export const getOrderStatusText = (status: OrderStatus): string => {
   const statusMap: Record<OrderStatus, string> = {
     [ORDER_STATUS.PENDING]: ORDERSTATTEXT.PENDING,
     [ORDER_STATUS.PAID]: ORDERSTATTEXT.PAID,
@@ -217,3 +217,61 @@ const getOrderStatusText = (status: OrderStatus): string => {
 
   return statusMap[status];
 };
+
+export function formatAdminOrderDetails(
+  order: Order,
+  language: string,
+): string {
+  const statusEmojis: Record<OrderStatus, string> = {
+    [ORDER_STATUS.PENDING]: '⏳',
+    [ORDER_STATUS.PAID]: '💰',
+    [ORDER_STATUS.PAYMENT_VALIDATED]: '✅',
+    [ORDER_STATUS.PAYMENT_INVALIDATED]: '❌',
+    [ORDER_STATUS.SHIPPED]: '📦',
+    [ORDER_STATUS.DELIVERED]: '✨',
+    [ORDER_STATUS.CANCELLED]: '🚫',
+  };
+
+  const statusIcon = statusEmojis[order.status] || '📋';
+  const statusText = getOrderStatusText(order.status);
+
+  let message = '';
+
+  if (language === 'fa') {
+    message = `${statusIcon} جزئیات سفارش #${order.id}\n\n`;
+    message += `👤 کاربر: ${order.user?.fullName || 'نامشخص'}\n`;
+    message += `📱 تلگرام: @${order.user?.fullName || 'ندارد'}\n`;
+    message += `📋 کد پیگیری: ${order.trackingNumber}\n`;
+    message += `💰 مبلغ کل: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n`;
+    message += `📊 وضعیت: ${statusText}\n`;
+    message += `📸 رسید: ${order.receiptImage ? 'آپلود شده ✅' : 'آپلود نشده ❌'}\n`;
+    message += `📅 تاریخ: ${new Date(order.createdAt).toLocaleDateString('fa-IR')}\n\n`;
+
+    if (order.orderItems && order.orderItems.length > 0) {
+      message += `📦 محصولات:\n`;
+      order.orderItems.forEach((item) => {
+        const itemTotal = item.price * item.quantity;
+        message += `  • ${item.product.name} × ${item.quantity} = ${itemTotal.toLocaleString('fa-IR')} تومان\n`;
+      });
+    }
+  } else {
+    message = `${statusIcon} Order Details #${order.id}\n\n`;
+    message += `👤 User: ${order.user?.fullName || 'Unknown'}\n`;
+    message += `📱 Telegram: @${order.user?.fullName || 'None'}\n`;
+    message += `📋 Tracking: ${order.trackingNumber}\n`;
+    message += `💰 Total: ${order.totalAmount.toLocaleString()} sum\n`;
+    message += `📊 Status: ${statusText}\n`;
+    message += `📸 Receipt: ${order.receiptImage ? 'Uploaded ✅' : 'Not uploaded ❌'}\n`;
+    message += `📅 Date: ${new Date(order.createdAt).toLocaleDateString()}\n\n`;
+
+    if (order.orderItems && order.orderItems.length > 0) {
+      message += `📦 Products:\n`;
+      order.orderItems.forEach((item) => {
+        const itemTotal = item.price * item.quantity;
+        message += `  • ${item.product.name} × ${item.quantity} = ${itemTotal.toLocaleString()} sum\n`;
+      });
+    }
+  }
+
+  return message;
+}

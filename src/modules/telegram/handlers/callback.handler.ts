@@ -27,6 +27,19 @@ import {
   showProductsForEdit,
   startProductUpdate,
 } from 'src/modules/product/helpers/product-update.helper';
+import {
+  handleAdminChangeStatus,
+  handleAdminOrdersList,
+  handleAdminSetStatus,
+  handleAdminViewReceipt,
+  handleManageOrders,
+} from './admin-order.handler';
+import {
+  handleAdminChangeStatusSingle,
+  handleAdminSetStatusSingle,
+  handleAdminViewReceiptSingle,
+  handleSearchOrder,
+} from './admin-search-order.handler';
 
 @Injectable()
 export class CallbackHandler {
@@ -71,9 +84,16 @@ export class CallbackHandler {
       'delete_fb',
       'select_cat_for_product',
       'update_cat_for_product',
+      'manage_orders',
+      'admin_orders',
+      'adm_rcpt',
+      'adm_chg',
+      'adm_sts',
+      'app_pay',
+      'rej_pay',
+      'search_order',
     ];
 
-    // Exclude user profile edits from admin callbacks
     const userProfileCallbacks = [
       'edit_fullName',
       'edit_phone',
@@ -724,6 +744,92 @@ export class CallbackHandler {
               parse_mode: 'HTML',
               reply_markup: getAdminKeyboard(language),
             },
+          );
+        } else if (data === 'manage_orders') {
+          await handleManageOrders(chatId, language, this.telegramService);
+        } else if (data?.startsWith('admin_orders_')) {
+          await handleAdminOrdersList(
+            data,
+            chatId,
+            query.message.message_id,
+            query.id,
+            language,
+            this.orderService,
+            this.telegramService,
+            bot,
+          );
+        } else if (data?.startsWith('adm_rcpt_')) {
+          if (data.startsWith('adm_rcpt_s_')) {
+            await handleAdminViewReceiptSingle(
+              data,
+              chatId,
+              query.id,
+              language,
+              this.orderService,
+              bot,
+            );
+          } else {
+            await handleAdminViewReceipt(
+              data,
+              chatId,
+              query.id,
+              language,
+              this.orderService,
+              bot,
+            );
+          }
+        } else if (data?.startsWith('adm_chg_')) {
+          if (data.startsWith('adm_chg_s_')) {
+            await handleAdminChangeStatusSingle(
+              data,
+              chatId,
+              query.message.message_id,
+              query.id,
+              language,
+              bot,
+            );
+          } else {
+            await handleAdminChangeStatus(
+              data,
+              chatId,
+              query.message.message_id,
+              query.id,
+              language,
+              bot,
+            );
+          }
+        } else if (data?.startsWith('adm_sts_')) {
+          if (data.startsWith('adm_sts_s_')) {
+            await handleAdminSetStatusSingle(
+              data,
+              chatId,
+              query.message.message_id,
+              query.id,
+              language,
+              this.orderService,
+              this.telegramService,
+              bot,
+            );
+          } else {
+            await handleAdminSetStatus(
+              data,
+              chatId,
+              query.message.message_id,
+              query.id,
+              language,
+              this.orderService,
+              this.telegramService,
+              bot,
+            );
+          }
+        } else if (data === 'search_order') {
+          await handleSearchOrder(
+            bot,
+            chatId,
+            language,
+            this.orderService,
+            this.telegramService,
+            this.logger,
           );
         }
       } catch (error) {

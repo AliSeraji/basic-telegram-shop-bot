@@ -7,13 +7,11 @@ import TelegramBot = require('node-telegram-bot-api');
 
 const logger = new Logger('OrderPlacementHelper');
 
-// Store pending receipt uploads (orderId -> { chatId, telegramId, language })
 const pendingReceipts = new Map<
   number,
   { chatId: number; telegramId: string; language: string }
 >();
 
-// Bank account information
 const BANK_ACCOUNT = {
   accountNumber: '1234567890123456',
   accountHolder: 'نام فروشگاه',
@@ -218,7 +216,6 @@ export async function handleReceiptUpload(
   msg: TelegramBot.Message,
   orderService: OrderService,
   telegramService: TelegramService,
-  userService: UserService,
 ): Promise<void> {
   try {
     const chatId = msg.chat.id;

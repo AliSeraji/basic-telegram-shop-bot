@@ -16,6 +16,7 @@ import { ProductService } from '../product/product.service';
 import { ORDER_STATUS } from '../../common/constants';
 import { TelegramService } from '../telegram/telegram.service';
 import TelegramBot from 'node-telegram-bot-api';
+import { getOrderStatusText } from '../telegram/utils/helpers';
 
 @Injectable()
 export class OrderService {
@@ -231,7 +232,7 @@ export class OrderService {
 
     const message =
       language === 'fa'
-        ? `${status}: به روز رسانی شد ${id}# وضعیت سفارش📋`
+        ? `وضعیت سفارش #${id} بروز رسانی شد\n${getOrderStatusText(status)}`
         : `📋 Order status #${id} has been updated: ${status}`;
 
     await this.telegramService.sendMessage(order.user.telegramId, message, {
@@ -340,5 +341,70 @@ export class OrderService {
       soldProducts,
       cartItems: cartItems.length,
     };
+  }
+
+  async getOrdersForAdmin(
+    page: number = 1,
+    limit: number = 5,
+    status?: string,
+    hasReceipt?: boolean,
+  ): Promise<{ orders: Order[]; total: number }> {
+    this.logger.log(
+      `Fetching admin orders, page: ${page}, limit: ${limit}, status: ${status}, hasReceipt: ${hasReceipt}`,
+    );
+
+    const queryBuilder = this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.orderItems', 'orderItems')
+      .leftJoinAndSelect('orderItems.product', 'product')
+      .orderBy('order.createdAt', 'DESC');
+
+    if (status) {
+      queryBuilder.andWhere('order.status = :status', { status });
+    }
+
+    if (hasReceipt !== undefined) {
+      if (hasReceipt) {
+        queryBuilder.andWhere('order.receiptImage IS NOT NULL');
+      } else {
+        queryBuilder.andWhere('order.receiptImage IS NULL');
+      }
+    }
+
+    const [orders, total] = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    this.logger.log(`Found ${orders.length} orders out of ${total} total`);
+    return { orders, total };
+  }
+
+  async updateOrderStatus(
+    orderId: number,
+    status: (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS],
+  ): Promise<Order> {
+    this.logger.log(`Updating order ${orderId} status to: ${status}`);
+    const order = await this.findOne(orderId);
+    order.status = status;
+    order.updatedAt = new Date();
+    return await this.orderRepository.save(order);
+  }
+
+  async findByTrackingNumber(trackingNumber: string): Promise<Order | null> {
+    this.logger.log(
+      `Searching for order with tracking number: ${trackingNumber}`,
+    );
+    const order = await this.orderRepository.findOne({
+      where: { trackingNumber },
+      relations: ['user', 'orderItems', 'orderItems.product'],
+    });
+
+    if (!order) {
+      this.logger.log(`No order found with tracking number: ${trackingNumber}`);
+    }
+
+    return order;
   }
 }

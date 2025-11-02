@@ -9,7 +9,7 @@ export const ORDER_STATUS = {
 } as const;
 
 export const ORDERSTATTEXT = {
-  PENDING: 'در انتظار',
+  PENDING: 'در انتظار پرداخت',
   PAID: 'پرداخت شده',
   PAYMENT_VALIDATED: 'پرداخت تایید شده',
   PAYMENT_INVALIDATED: 'پرداخت نامعتبر',

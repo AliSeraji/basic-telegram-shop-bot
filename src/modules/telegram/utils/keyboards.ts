@@ -88,6 +88,18 @@ export function getAdminKeyboard(
           callback_data: 'view_orders',
         },
         {
+          text: language === 'fa' ? '📦 مدیریت سفارشات' : '📦 Manage Orders', // NEW BUTTON
+          callback_data: 'manage_orders',
+        },
+      ],
+      [
+        {
+          text: language === 'fa' ? '🔍 جستجوی سفارش' : '🔍 Search Order', // NEW BUTTON
+          callback_data: 'search_order',
+        },
+      ],
+      [
+        {
           text: language === 'fa' ? '🚚 تحویل‌ها' : '🚚 Deliveries',
           callback_data: 'view_deliveries',
         },
