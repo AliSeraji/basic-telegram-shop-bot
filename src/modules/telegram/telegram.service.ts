@@ -139,7 +139,7 @@ export class TelegramService {
         const message =
           language === 'fa'
             ? `👤 پروفایل من\n\n` +
-              `📝 نام: ${user.fullName || 'وارد نشده'}\n` +
+              `📝 نام و نام خانوادگی: ${user.fullName || 'وارد نشده'}\n` +
               `📞 شماره تلفن: ${user.phone || 'وارد نشده'}\n` +
               `📧 ایمیل: ${user.email || 'وارد نشده'}\n` +
               `📍 آدرس: ${user.userAddress || 'وارد نشده'}\n` +
@@ -169,15 +169,6 @@ export class TelegramService {
             {
               text: language === 'fa' ? '✏️ ویرایش آدرس' : '✏️ Edit Address',
               callback_data: 'edit_userAddress',
-            },
-          ],
-          [
-            {
-              text:
-                language === 'fa'
-                  ? '🏠 بازگشت به منوی اصلی'
-                  : '🏠 Return to Main Menu',
-              callback_data: 'return_to_main_menu',
             },
           ],
         ];

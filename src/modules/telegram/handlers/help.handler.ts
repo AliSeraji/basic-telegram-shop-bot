@@ -152,33 +152,33 @@ export class HelpHandler {
       }
     });
 
-    bot.on('callback_query', async (query) => {
-      if (!query.data || query.data !== 'return_to_main_menu') return;
-      if (!query.message?.chat?.id || !query.from) return;
+    // bot.on('callback_query', async (query) => {
+    //   if (!query.data || query.data !== 'return_to_main_menu') return;
+    //   if (!query.message?.chat?.id || !query.from) return;
 
-      const chatId = query.message.chat.id;
-      const telegramId = query.from.id.toString();
+    //   const chatId = query.message.chat.id;
+    //   const telegramId = query.from.id.toString();
 
-      try {
-        this.activeHelpSessions.delete(telegramId);
+    //   try {
+    //     this.activeHelpSessions.delete(telegramId);
 
-        const user = await this.userService.findByTelegramId(telegramId);
-        const language = user.language || 'fa';
+    //     const user = await this.userService.findByTelegramId(telegramId);
+    //     const language = user.language || 'fa';
 
-        const message =
-          language === 'fa'
-            ? '🏠 به منوی اصلی بازگشتید'
-            : '🏠 Returned to main menu';
+    //     const message =
+    //       language === 'fa'
+    //         ? '🏠 به منوی اصلی بازگشتید'
+    //         : '🏠 Returned to main menu';
 
-        await this.telegramService.sendMessage(chatId, message, {
-          reply_markup: getMainKeyboard(false, language),
-        });
-        await bot.answerCallbackQuery(query.id);
-      } catch (error) {
-        this.logger.error(`Error in return_to_main_menu: ${error.message}`);
-        this.activeHelpSessions.delete(telegramId);
-        await bot.answerCallbackQuery(query.id);
-      }
-    });
+    //     await this.telegramService.sendMessage(chatId, message, {
+    //       reply_markup: getMainKeyboard(false, language),
+    //     });
+    //     await bot.answerCallbackQuery(query.id);
+    //   } catch (error) {
+    //     this.logger.error(`Error in return_to_main_menu: ${error.message}`);
+    //     this.activeHelpSessions.delete(telegramId);
+    //     await bot.answerCallbackQuery(query.id);
+    //   }
+    // });
   }
 }

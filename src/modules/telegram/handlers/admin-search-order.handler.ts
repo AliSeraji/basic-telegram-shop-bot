@@ -25,6 +25,14 @@ export async function handleSearchOrder(
   bot.once('message', async (msg) => {
     if (!msg.text) return;
 
+    if (msg.text.startsWith('/') || !msg.text.startsWith('TRK')) {
+      const message = 'چنین کد پیگیری معتبر نیست ❌';
+      await telegramService.sendMessage(chatId, message, {
+        reply_markup: getAdminKeyboard(language),
+      });
+      return;
+    }
+
     try {
       const trackingNumber = msg.text.trim();
       const order = await orderService.findByTrackingNumber(trackingNumber);
