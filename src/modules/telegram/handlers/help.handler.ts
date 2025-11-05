@@ -31,7 +31,7 @@ export class HelpHandler {
       );
     }
 
-    bot.onText(/🆘 راهنما|🆘 Help/i, async (msg) => {
+    bot.onText(/🆘 پشتیبانی|🆘 Help/i, async (msg) => {
       if (!msg.from) return;
       const chatId = msg.chat.id;
       const telegramId = msg.from.id.toString();
@@ -45,8 +45,20 @@ export class HelpHandler {
 
         const message =
           language === 'fa'
-            ? `🆘 راهنما\n\nاگر سوالی دارید، با مدیر تماس بگیرید: @${adminTelegramUser}\n\nیا پیام خود را بنویسید:`
-            : `🆘 Help\n\nIf you have any questions, contact the administrator: @${adminTelegramUser}\n\nOr write a message:`;
+            ? `🆘 پشتیبانی\n\n` +
+              `📞 راه‌های ارتباطی:\n\n` +
+              `💬 می‌توانید پیام خود را مستقیماً در همین بات بنویسید و ارسال کنید.\n\n` +
+              `یا\n\n` +
+              `📱 با مدیر تماس بگیرید: @${adminTelegramUser}\n\n` +
+              `━━━━━━━━━━━━━━━\n` +
+              `❓ هر سوالی درباره سفارش‌تان دارید یا مشکلی پیش آمده، ما اینجا هستیم تا کمک کنیم!`
+            : `🆘 Help\n\n` +
+              `📞 Contact Options:\n\n` +
+              `💬 You can write and send your message directly here in this bot.\n\n` +
+              `or\n\n` +
+              `📱 Contact the administrator: @${adminTelegramUser}\n\n` +
+              `━━━━━━━━━━━━━━━\n` +
+              `❓ Have any questions about your order or facing any issues? We're here to help!`;
 
         await this.telegramService.sendMessage(chatId, message, {
           reply_markup: {

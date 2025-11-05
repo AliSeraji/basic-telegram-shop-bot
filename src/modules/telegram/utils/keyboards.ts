@@ -15,7 +15,7 @@ export function getMainKeyboard(
     ],
     [
       { text: language === 'fa' ? 'ℹ️ درباره ما' : 'ℹ️ About Us' },
-      { text: language === 'fa' ? '🆘 راهنما' : '🆘 Help' },
+      { text: language === 'fa' ? '🆘 پشتیبانی' : '🆘 Help' },
     ],
   ];
 
@@ -41,6 +41,8 @@ export function getAdminKeyboard(
           text: language === 'fa' ? '➕ افزودن دسته‌بندی' : '➕ Add Category',
           callback_data: 'add_category',
         },
+      ],
+      [
         {
           text: language === 'fa' ? '✏️ ویرایش دسته‌بندی' : '✏️ Edit Category',
           callback_data: 'edit_category',
@@ -59,6 +61,8 @@ export function getAdminKeyboard(
           text: language === 'fa' ? '➕ افزودن محصول' : '➕ Add Product',
           callback_data: 'add_product',
         },
+      ],
+      [
         {
           text: language === 'fa' ? '✏️ ویرایش محصول' : '✏️ Edit Product',
           callback_data: 'edit_product',
@@ -100,28 +104,12 @@ export function getAdminKeyboard(
       ],
       [
         {
-          text: language === 'fa' ? '🚚 تحویل‌ها' : '🚚 Deliveries',
-          callback_data: 'view_deliveries',
-        },
-        {
-          text: language === 'fa' ? '✏️ ویرایش تحویل' : '✏️ Edit Delivery',
-          callback_data: 'edit_delivery',
-        },
-      ],
-      [
-        {
           text: language === 'fa' ? '🗒️ بازخوردها' : '🗒️ Feedbacks',
           callback_data: 'view_feedback',
         },
         {
           text: language === 'fa' ? '🗑️ حذف بازخورد' : '🗑️ Delete Feedback',
           callback_data: 'delete_feedback',
-        },
-      ],
-      [
-        {
-          text: language === 'fa' ? '🎟️ ایجاد کد تخفیف' : '🎟️ Create Promocode',
-          callback_data: 'create_promocode',
         },
       ],
       [

@@ -56,7 +56,7 @@ export async function startOrderPlacement(
     const itemsList = cartItems
       .map(
         (item) =>
-          `${item.product.name} - ${item.quantity} عدد - ${(item.product.price * item.quantity).toLocaleString('fa-IR')} تومان`,
+          `${item.product.name} - ${item.quantity} عدد - ${(item.product.price * item.quantity).toLocaleString('fa-IR')} دلار`,
       )
       .join('\n');
 
@@ -67,7 +67,7 @@ export async function startOrderPlacement(
           `📞 تلفن: ${user.phone || 'وارد نشده'}\n` +
           `📍 آدرس: ${user.userAddress || 'وارد نشده'}\n\n` +
           `🛒 محصولات:\n${itemsList}\n\n` +
-          `💰 مجموع: ${totalAmount.toLocaleString('fa-IR')} تومان\n\n` +
+          `💰 مجموع: ${totalAmount.toLocaleString('fa-IR')} دلار\n\n` +
           `آیا اطلاعات صحیح است؟`
         : `📋 Please review your order:\n\n` +
           `👤 Name: ${user.fullName || 'Not provided'}\n` +
@@ -159,28 +159,46 @@ export async function showPaymentInstructions(
     language === 'fa'
       ? `✅ سفارش شما ثبت شد!\n\n` +
         `📦 کد پیگیری: ${trackingNumber}\n` +
-        `💰 مبلغ قابل پرداخت: ${totalAmount.toLocaleString('fa-IR')} تومان\n\n` +
+        `💰 مبلغ قابل پرداخت: ${totalAmount.toLocaleString('fa-IR')} دلار\n\n` +
         `━━━━━━━━━━━━━━━\n` +
+        `⚠️ نکته مهم:\n` +
+        `لطفاً معادل ریالی مبلغ دلار فوق را بر اساس نرخ روز به حساب زیر واریز کنید.\n\n` +
         `💳 اطلاعات حساب:\n` +
         `🏦 بانک: ${BANK_ACCOUNT.bankName}\n` +
         `👤 صاحب حساب: ${BANK_ACCOUNT.accountHolder}\n` +
         `💳 شماره حساب: ${BANK_ACCOUNT.accountNumber}\n` +
         `💳 شبا: ${BANK_ACCOUNT.iban}\n` +
         `━━━━━━━━━━━━━━━\n\n` +
-        `📸 لطفاً پس از واریز، عکس رسید را ارسال کنید.\n\n` +
-        `⚠️ فقط عکس رسید واریز را ارسال کنید.`
+        `📋 مراحل بعدی:\n` +
+        `1️⃣ واریز معادل ریالی مبلغ به حساب بالا\n` +
+        `2️⃣ ارسال عکس رسید واریز (فقط عکس)\n` +
+        `3️⃣ بررسی رسید توسط مدیران\n` +
+        `4️⃣ تایید پرداخت و پردازش سفارش\n\n` +
+        `📸 لطفاً پس از واریز، عکس رسید را ارسال کنید.\n` +
+        `⚠️ فقط عکس رسید واریز را ارسال کنید.\n\n` +
+        `✅ پس از تایید پرداخت توسط مدیران، سفارش شما پردازش خواهد شد.\n\n` +
+        `🙏 از صبر و شکیبایی شما سپاسگزاریم!`
       : `✅ Your order has been registered!\n\n` +
         `📦 Tracking number: ${trackingNumber}\n` +
-        `💰 Amount: ${totalAmount.toLocaleString()} Toman\n\n` +
+        `💰 Amount: ${totalAmount.toLocaleString()} USD\n\n` +
         `━━━━━━━━━━━━━━━\n` +
+        `⚠️ Important Note:\n` +
+        `Please pay the Iranian Rial equivalent of the above USD amount based on the current exchange rate to the account below.\n\n` +
         `💳 Account information:\n` +
         `🏦 Bank: ${BANK_ACCOUNT.bankName}\n` +
         `👤 Account holder: ${BANK_ACCOUNT.accountHolder}\n` +
         `💳 Account number: ${BANK_ACCOUNT.accountNumber}\n` +
         `💳 IBAN: ${BANK_ACCOUNT.iban}\n` +
         `━━━━━━━━━━━━━━━\n\n` +
-        `📸 Please send the receipt photo after payment.\n\n` +
-        `⚠️ Only send the payment receipt photo.`;
+        `📋 Next Steps:\n` +
+        `1️⃣ Deposit the Rial equivalent to the account above\n` +
+        `2️⃣ Send the receipt photo (photo only)\n` +
+        `3️⃣ Admins will review your receipt\n` +
+        `4️⃣ Payment approval and order processing\n\n` +
+        `📸 Please send the receipt photo after payment.\n` +
+        `⚠️ Only send the payment receipt photo.\n\n` +
+        `✅ Your order will be processed after admin approval.\n\n` +
+        `🙏 Thank you for your patience!`;
 
   await telegramService.sendMessage(chatId, paymentMessage, {
     reply_markup: {

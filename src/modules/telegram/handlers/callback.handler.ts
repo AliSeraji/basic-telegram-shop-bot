@@ -417,15 +417,16 @@ export class CallbackHandler {
           const userId = parseInt(data.split('_')[2]);
           const message =
             language === 'fa'
-              ? '👤 نام و شماره تلفن جدید را وارد کنید (نام;تلفن;آدرس):'
+              ? '👤 نام و شماره تلفن و آدرس جدید کاربر را وارد کنید و دقت کنید که حتما با نشانه ؛ از هم جدا شوند (نام؛تلفن؛آدرس):'
               : '👤 Enter new name and phone number (name;phone;Address):';
           await this.telegramService.sendMessage(chatId, message, {
             reply_markup: { force_reply: true },
           });
+          const splitter = language === 'fa' ? '؛' : ';';
           bot.once('message', async (msg) => {
             if (!msg.text) return;
             try {
-              const [fullName, phone, address] = msg.text.split(';');
+              const [fullName, phone, address] = msg.text.split(splitter);
               await this.userService.update(userId, {
                 fullName: fullName.trim(),
                 phone: phone.trim(),

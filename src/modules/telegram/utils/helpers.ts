@@ -4,7 +4,11 @@ import { Order } from '../../order/order.entity';
 import { Product } from '../../product/product.entity';
 import { User } from '../../user/user.entity';
 import { Delivery } from '../../delivery/delivery.entity';
-import { ORDER_STATUS, ORDERSTATTEXT } from 'src/common/constants';
+import {
+  ORDER_STATUS,
+  OrderStatistics,
+  ORDERSTATTEXT,
+} from 'src/common/constants';
 
 export function formatProductMessage(
   product: Product,
@@ -21,8 +25,7 @@ export function formatProductMessage(
   return [
     `${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}`,
     `${description || (language === 'fa' ? 'بدون توضیحات' : 'No description')}`,
-    `💸 ${language === 'fa' ? 'قیمت' : 'Price'}: ${product.price} تومان`,
-    `📦 ${language === 'fa' ? 'در انبار' : 'In stock'}: ${product.stock} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
+    `💸 ${language === 'fa' ? 'قیمت' : 'Price'}: ${product.price} دلار`,
   ].join('\n');
 }
 
@@ -64,7 +67,7 @@ export function formatProductList(
         language === 'fa'
           ? prod.category?.name || 'N/A'
           : prod.category?.nameFa || 'N/A';
-      return `${language === 'fa' ? '📋 شناسه' : '📋 ID'}: ${prod.id}, ${language === 'fa' ? 'نام' : 'Name'}: ${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}, 💸 ${language === 'fa' ? 'قیمت' : 'Price'}: ${prod.price} تومان, 📌 ${language === 'fa' ? 'دسته‌بندی' : 'Category'}: ${categoryName}, 📦 ${language === 'fa' ? 'در انبار' : 'In stock'}: ${prod.stock}`;
+      return `${language === 'fa' ? '📋 شناسه' : '📋 ID'}: ${prod.id}, ${language === 'fa' ? 'نام' : 'Name'}: ${name || (language === 'fa' ? 'نام وارد نشده' : 'Name not specified')}, 💸 ${language === 'fa' ? 'قیمت' : 'Price'}: ${prod.price} دلار, 📌 ${language === 'fa' ? 'دسته‌بندی' : 'Category'}: ${categoryName}, 📦 ${language === 'fa' ? 'در انبار' : 'In stock'}: ${prod.stock}`;
     })
     .join('\n');
 }
@@ -130,8 +133,9 @@ export function formatOrderList(
 
       return [
         `${language === 'fa' ? '📋 سفارش' : '📋 Order'} #${order.id}`,
+        `${language === 'fa' ? '🔢 کد پیگیری' : '🔢 Tracking'}: ${order.trackingNumber}`,
         `${language === 'fa' ? '👤 کاربر' : '👤 User'}: ${order.user?.fullName || (language === 'fa' ? 'وارد نشده' : 'Not specified')}`,
-        `${language === 'fa' ? '💸 جمع کل' : '💸 Total'}: ${order.totalAmount} تومان`,
+        `${language === 'fa' ? '💸 جمع کل' : '💸 Total'}: ${order.totalAmount} دلار`,
         `${language === 'fa' ? '📊 وضعیت' : '📊 Status'}: ${getOrderStatusText(order.status)}`,
         `${language === 'fa' ? '📦 محصولات' : '📦 Products'}: ${items || 'N/A'}`,
         delivery,
@@ -168,15 +172,18 @@ export function formatDeliveryList(
     .join('\n');
 }
 
-export function formatStats(stats: any, language: string = 'fa'): string {
+export function formatStats(
+  stats: OrderStatistics,
+  language: string = 'fa',
+): string {
   const monthlyStats =
     Object.entries(stats.monthlyStats || {})
-      .map(([month, amount]) => `📆 ${month}: ${amount} تومان`)
+      .map(([month, amount]) => `📆 ${month}: ${amount} دلار`)
       .join('\n') ||
     (language === 'fa' ? 'اطلاعاتی موجود نیست' : 'No data available');
   const yearlyStats =
     Object.entries(stats.yearlyStats || {})
-      .map(([year, amount]) => `📆 ${year}: ${amount} تومان`)
+      .map(([year, amount]) => `📆 ${year}: ${amount} دلار`)
       .join('\n') ||
     (language === 'fa' ? 'اطلاعاتی موجود نیست' : 'No data available');
 
@@ -184,19 +191,21 @@ export function formatStats(stats: any, language: string = 'fa'): string {
     `${language === 'fa' ? '📊 آمار' : '📊 Statistics'}`,
     `━━━━━━━━━━━━━━━`,
     `${language === 'fa' ? '📋 کل سفارشات' : '📋 Total orders'}: ${stats.totalOrders}`,
-    `${language === 'fa' ? '💸 مجموع مبلغ (پرداخت شده)' : '💸 Total amount (paid)'}: ${stats.totalAmount} تومان`,
+    `${language === 'fa' ? '💸 مجموع مبلغ (تایید شده)' : '💸 Total amount (validated)'}: ${stats.totalAmount} دلار`,
     `${language === 'fa' ? '⏳ سفارشات در انتظار' : '⏳ Pending orders'}: ${stats.pendingOrders}`,
-    `${language === 'fa' ? '✅ سفارشات پرداخت شده' : '✅ Paid orders'}: ${stats.paidOrders}`,
+    `${language === 'fa' ? '💰 سفارشات پرداخت شده' : '💰 Paid orders'}: ${stats.paidOrders}`,
+    `${language === 'fa' ? '✅ پرداخت‌های تایید شده' : '✅ Validated payments'}: ${stats.validatedPayments}`,
+    `${language === 'fa' ? '❌ پرداخت‌های رد شده' : '❌ Invalidated payments'}: ${stats.invalidatedPayments}`,
     `${language === 'fa' ? '🚚 در حال ارسال' : '🚚 In delivery'}: ${stats.shippedOrders}`,
     `${language === 'fa' ? '✔️ تحویل داده شده' : '✔️ Delivered'}: ${stats.deliveredOrders}`,
-    `${language === 'fa' ? '❌ لغو شده' : '❌ Cancelled'}: ${stats.cancelledOrders}`,
+    `${language === 'fa' ? '🚫 لغو شده' : '🚫 Cancelled'}: ${stats.cancelledOrders}`,
     `${language === 'fa' ? '📦 محصولات فروخته شده' : '📦 Sold products'}: ${stats.soldProducts}`,
     `${language === 'fa' ? '🛒 محصولات در سبد خرید' : '🛒 Cart items'}: ${stats.cartItems}`,
     `━━━━━━━━━━━━━━━`,
-    `${language === 'fa' ? '📅 گزارش ماهانه (پرداخت شده)' : '📅 Monthly report (paid)'}:`,
+    `${language === 'fa' ? '📅 گزارش ماهانه (تایید شده)' : '📅 Monthly report (validated)'}:`,
     monthlyStats,
     `━━━━━━━━━━━━━━━`,
-    `${language === 'fa' ? '📅 گزارش سالانه (پرداخت شده)' : '📅 Yearly report (paid)'}:`,
+    `${language === 'fa' ? '📅 گزارش سالانه (تایید شده)' : '📅 Yearly report (validated)'}:`,
     yearlyStats,
     `━━━━━━━━━━━━━━━`,
   ].join('\n');
@@ -242,7 +251,7 @@ export function formatAdminOrderDetails(
     message += `👤 کاربر: ${order.user?.fullName || 'نامشخص'}\n`;
     message += `📱 تلگرام: @${order.user?.fullName || 'ندارد'}\n`;
     message += `📋 کد پیگیری: ${order.trackingNumber}\n`;
-    message += `💰 مبلغ کل: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n`;
+    message += `💰 مبلغ کل: ${order.totalAmount.toLocaleString('fa-IR')} دلار\n`;
     message += `📊 وضعیت: ${statusText}\n`;
     message += `📸 رسید: ${order.receiptImage ? 'آپلود شده ✅' : 'آپلود نشده ❌'}\n`;
     message += `📅 تاریخ: ${new Date(order.createdAt).toLocaleDateString('fa-IR')}\n\n`;
@@ -251,7 +260,7 @@ export function formatAdminOrderDetails(
       message += `📦 محصولات:\n`;
       order.orderItems.forEach((item) => {
         const itemTotal = item.price * item.quantity;
-        message += `  • ${item.product.name} × ${item.quantity} = ${itemTotal.toLocaleString('fa-IR')} تومان\n`;
+        message += `  • ${item.product.name} × ${item.quantity} = ${itemTotal.toLocaleString('fa-IR')} دلار\n`;
       });
     }
   } else {

@@ -67,7 +67,7 @@ export async function startProductUpdate(
     // Step 2: Ask for new price
     const priceMessage =
       language === 'fa'
-        ? `💰 قیمت جدید محصول را وارد کنید (به تومان):\n\nقیمت فعلی: ${currentProduct.price}`
+        ? `💰 قیمت جدید محصول را وارد کنید (به دلار):\n\nقیمت فعلی: ${currentProduct.price}`
         : `💰 Enter new product price (in Toman):\n\nCurrent: ${currentProduct.price}`;
     await telegramService.sendMessage(chatId, priceMessage, {
       reply_markup: { force_reply: true },

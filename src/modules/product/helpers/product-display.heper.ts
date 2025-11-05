@@ -18,7 +18,7 @@ export async function sendProductWithImage(
 
     const caption =
       language === 'fa'
-        ? `${product.name}\n\n${product.description}\n\nقیمت: ${product.price} تومان`
+        ? `${product.name}\n\n${product.description}\n\nقیمت: ${product.price} دلار`
         : `${product.name}\n\n${product.description}\n\nPrice: ${product.price} Toman`;
 
     if (product.imageData && product.imageMimeType) {
@@ -68,7 +68,7 @@ export async function sendProductsInCategory(
     for (const product of categoryProducts) {
       const caption =
         language === 'fa'
-          ? `${product.name}\n\n${product.description}\n\nقیمت: ${product.price} تومان`
+          ? `${product.name}\n\n${product.description}\n\nقیمت: ${product.price} دلار`
           : `${product.name}\n\n${product.description}\n\nPrice: ${product.price} Toman`;
 
       if (product.imageData && product.imageMimeType) {
@@ -96,7 +96,7 @@ export async function sendProduct(
   try {
     const caption =
       language === 'fa'
-        ? `${product.name}\n\n${product.description}\n\nقیمت: ${product.price} تومان`
+        ? `${product.name}\n\n${product.description}\n\nقیمت: ${product.price} دلار`
         : `${product.name}\n\n${product.description}\n\nPrice: ${product.price} Toman`;
 
     if (product.imageData && product.imageMimeType) {

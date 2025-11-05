@@ -40,14 +40,19 @@ export class CartHandler {
       cartItems.forEach((item) => {
         const itemText =
           language === 'fa'
-            ? `${item.product.name} - ${item.quantity} عدد، قیمت: ${item.product.price * item.quantity} تومان\n\n`
+            ? `${item.product.name} - ${item.quantity} عدد، قیمت: ${item.product.price * item.quantity} دلار\n\n`
             : `${item.product.name} - ${item.quantity} pcs., Price: ${item.product.price * item.quantity} sum\n\n`;
         message += itemText;
         total += item.product.price * item.quantity;
       });
 
       message +=
-        language === 'fa' ? `جمع کل: ${total} تومان` : `Total: ${total} sum`;
+        language === 'fa' ? `جمع کل: ${total} دلار` : `Total: ${total} sum`;
+
+      message +=
+        language === 'fa'
+          ? '\n\nلطفا توجه کنید که قیمت ها به دلار هستند.لطفا برای پرداخت معادل ریالی قیمت کالاها را در نظر بگیرید.'
+          : '\n\nTo place the order or clear the cart, choose an option:';
 
       await this.telegramService.sendMessage(chatId, message, {
         reply_markup: {

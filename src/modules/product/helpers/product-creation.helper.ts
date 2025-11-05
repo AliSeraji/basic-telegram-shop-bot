@@ -31,7 +31,7 @@ export async function startProductCreation(
     // Step 2: Ask for price
     const priceMessage =
       language === 'fa'
-        ? '💰 قیمت محصول را وارد کنید (به تومان):'
+        ? '💰 قیمت محصول را وارد کنید (به دلار):'
         : '💰 Enter product price (in Toman):';
     await telegramService.sendMessage(chatId, priceMessage, {
       reply_markup: { force_reply: true },

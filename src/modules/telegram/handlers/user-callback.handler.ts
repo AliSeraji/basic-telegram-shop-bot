@@ -57,7 +57,7 @@ export class UserCallbackHandler {
           const keyboard: TelegramBot.InlineKeyboardButton[][] = products.map(
             (prod) => [
               {
-                text: `${language === 'fa' ? prod.name : prod.name} - ${prod.price} تومان`,
+                text: `${language === 'fa' ? prod.name : prod.name} - ${prod.price} دلار`,
                 callback_data: `product_${prod.id}`,
               },
             ],
@@ -227,7 +227,7 @@ export class UserCallbackHandler {
           const instructionMessage =
             language === 'fa'
               ? `📸 لطفاً عکس رسید پرداخت را ارسال کنید.\n\n` +
-                `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
+                `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} دلار\n` +
                 `📦 کد پیگیری: ${order.trackingNumber}\n\n` +
                 `⚠️ توجه: فقط یک عکس واضح از رسید ارسال کنید.`
               : `📸 Please send the payment receipt photo.\n\n` +
@@ -264,7 +264,7 @@ export class UserCallbackHandler {
               ? `📦 وضعیت سفارش\n\n` +
                 `🔢 شناسه: ${order.id}\n` +
                 `📋 کد پیگیری: ${order.trackingNumber}\n` +
-                `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
+                `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} دلار\n` +
                 `📊 وضعیت: ${
                   order.status === ORDER_STATUS.PENDING
                     ? '⏳ در انتظار پرداخت'

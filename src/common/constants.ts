@@ -24,3 +24,19 @@ export const DELIVERY_STATUS = {
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
 } as const;
+
+export interface OrderStatistics {
+  totalOrders: number;
+  totalAmount: number;
+  monthlyStats: any;
+  yearlyStats: any;
+  pendingOrders: number;
+  paidOrders: number;
+  validatedPayments: number;
+  invalidatedPayments: number;
+  shippedOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  soldProducts: number;
+  cartItems: number;
+}

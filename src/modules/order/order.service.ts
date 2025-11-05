@@ -13,7 +13,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { UserService } from '../user/user.service';
 import { CartService } from '../cart/cart.service';
 import { ProductService } from '../product/product.service';
-import { ORDER_STATUS } from '../../common/constants';
+import { ORDER_STATUS, OrderStatistics } from '../../common/constants';
 import { TelegramService } from '../telegram/telegram.service';
 import TelegramBot from 'node-telegram-bot-api';
 import { getOrderStatusText } from '../telegram/utils/helpers';
@@ -107,7 +107,7 @@ export class OrderService {
       `🔔 سفارش جدید دریافت شد!\n\n` +
       `📦 شناسه سفارش: ${order.id}\n` +
       `👤 کاربر: ${order.user?.fullName || 'نامشخص'}\n` +
-      `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} تومان\n` +
+      `💰 مبلغ: ${order.totalAmount.toLocaleString('fa-IR')} دلار\n` +
       `📋 کد پیگیری: ${order.trackingNumber}\n\n` +
       `لطفاً رسید را بررسی و تایید کنید.`;
 
@@ -255,19 +255,7 @@ export class OrderService {
     });
   }
 
-  async getStats(): Promise<{
-    totalOrders: number;
-    totalAmount: number;
-    monthlyStats: any;
-    yearlyStats: any;
-    pendingOrders: number;
-    paidOrders: number;
-    shippedOrders: number;
-    deliveredOrders: number;
-    cancelledOrders: number;
-    soldProducts: number;
-    cartItems: number;
-  }> {
+  async getStats(): Promise<OrderStatistics> {
     this.logger.log('Fetching order stats');
     const orders = await this.orderRepository.find({
       relations: ['orderItems', 'orderItems.product'],
@@ -304,10 +292,8 @@ export class OrderService {
         invalidatedPayments++;
       } else if (order.status === ORDER_STATUS.SHIPPED) {
         shippedOrders++;
-        totalAmount += order.totalAmount;
       } else if (order.status === ORDER_STATUS.DELIVERED) {
         deliveredOrders++;
-        totalAmount += order.totalAmount;
       } else if (order.status === ORDER_STATUS.CANCELLED) {
         cancelledOrders++;
       }
@@ -335,6 +321,8 @@ export class OrderService {
       yearlyStats,
       pendingOrders,
       paidOrders,
+      validatedPayments,
+      invalidatedPayments,
       shippedOrders,
       deliveredOrders,
       cancelledOrders,

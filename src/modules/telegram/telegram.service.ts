@@ -17,7 +17,8 @@ import {
 export class TelegramService {
   private bot: TelegramBot;
   private logger = new Logger(TelegramService.name);
-  private readonly adminTelegramUser: string;
+  private readonly adminTelegramUser?: string;
+  private readonly instagramAccount?: string;
   private userEditStates = new Map<string, { field: string }>();
   private token?: string;
 
@@ -26,11 +27,15 @@ export class TelegramService {
     private userService: UserService,
     @Inject(forwardRef(() => OrderService))
     private readonly orderService: OrderService,
-    private deliveryService: DeliveryService,
   ) {
     this.token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    this.adminTelegramUser =
-      this.configService.get<string>('ADMIN_TELEGRAM_USERNAME') || 'AfineName';
+    this.adminTelegramUser = this.configService.get<string>(
+      'ADMIN_TELEGRAM_USERNAME',
+    );
+
+    this.instagramAccount = this.configService.get<string>(
+      'ADMIN_INSTAGRAM_ACCOUNT',
+    );
 
     if (!this.token) {
       this.logger.error('TELEGRAM_BOT_TOKEN is not defined in .env file');
@@ -345,9 +350,36 @@ export class TelegramService {
           msg.from.id.toString(),
         );
         const language = user.language || 'fa';
-        const message = `${language === 'fa' ? 'ℹ️ درباره ما' : 'ℹ️ About us'}\n\n${language === 'fa' ? 'ما یک فروشگاه آنلاین هستیم که محصولات باکیفیت آرایشی بهداشتی ژاپن را ارائه میدهیم' : 'We are an online store offering beauty products from Japan.'}\n\n${language === 'fa' ? 'تماس' : 'Contact'}: @${this.adminTelegramUser}\n${language === 'fa' ? 'پیج اینستاگرام' : 'Instagram page'}: https://yourshop.uz`;
+
+        const message =
+          language === 'fa'
+            ? `ℹ️ درباره ما\n\n` +
+              `ما یک فروشگاه آنلاین تخصصی هستیم که با هدف ارائه محصولات اصل و باکیفیت آرایشی و بهداشتی برند ژاپنی، خدمات خود را به شما عزیزان ارائه می‌دهیم.\n\n` +
+              `🎯 هدف ما رضایت شما و تامین نیازهای زیبایی شما با بهترین کیفیت است.\n\n` +
+              `📞 راه‌های ارتباطی:\n` +
+              `• تلگرام: @${this.adminTelegramUser}\n\n` +
+              `🙏 از اعتماد شما سپاسگزاریم!`
+            : `ℹ️ About Us\n\n` +
+              `We are a specialized online store dedicated to providing authentic, high-quality Japanese beauty and personal care products.\n\n` +
+              `🎯 Our goal is your satisfaction and meeting your beauty needs with the best quality.\n\n` +
+              `📞 Contact Us:\n` +
+              `• Telegram: @${this.adminTelegramUser}\n\n` +
+              `🙏 Thank you for trusting us!`;
+
         await this.bot.sendMessage(chatId, message, {
-          reply_markup: getMainKeyboard(false, language),
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text:
+                    language === 'fa'
+                      ? '📸 صفحه اینستاگرام ما'
+                      : '📸 Our Instagram Page',
+                  url: process.env.ADMIN_INSTAGRAM_ACCOUNT,
+                },
+              ],
+            ],
+          },
         });
       } catch (error) {
         this.logger.error(`Error in about: ${error.message}`);

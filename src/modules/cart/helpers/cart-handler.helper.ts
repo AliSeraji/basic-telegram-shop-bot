@@ -57,8 +57,8 @@ export async function handleAddToCart(
 
     const message =
       language === 'fa'
-        ? `📦 ${product.name}\n\nچند عدد می‌خواهید؟\n\n📊 موجودی: ${product.stock} عدد`
-        : `📦 ${product.name}\n\nHow many do you want?\n\n📊 Stock: ${product.stock} units`;
+        ? `📦 ${product.name}\n\nچند عدد از این کالا می‌خواهید؟\n\n`
+        : `📦 ${product.name}\n\nHow many do you want?`;
 
     await telegramService.sendMessage(chatId, message, {
       reply_markup: { inline_keyboard: keyboard },
@@ -112,7 +112,7 @@ export async function handleAddQuantityToCart(
     const totalPrice = product.price * quantity;
     const message =
       language === 'fa'
-        ? `✅ ${quantity} عدد ${product.name} به سبد خرید اضافه شد.\n\n💰 جمع: ${totalPrice.toLocaleString('fa-IR')} تومان`
+        ? `✅ ${quantity} عدد ${product.name} به سبد خرید اضافه شد.\n\n💰 جمع: ${totalPrice.toLocaleString('fa-IR')} دلار`
         : `✅ ${quantity}x ${product.name} added to cart.\n\n💰 Total: ${totalPrice.toLocaleString()} Toman`;
 
     await telegramService.sendMessage(chatId, message, {
