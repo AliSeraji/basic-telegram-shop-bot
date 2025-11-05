@@ -2,7 +2,6 @@ import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
 import { OrderService } from '../order/order.service';
-import { DeliveryService } from '../delivery/delivery.service';
 import { formatOrderList } from './utils/helpers';
 import { getMainKeyboard } from './utils/keyboards';
 

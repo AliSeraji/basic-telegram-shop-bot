@@ -117,19 +117,19 @@ export function formatOrderList(
             `${language === 'fa' ? item.product.name : item.product.name || item.product.name} - ${item.quantity} ${language === 'fa' ? 'عدد' : 'pcs.'}`,
         )
         .join(', ');
-      const delivery =
-        order.deliveries && order.deliveries.length > 0
-          ? [
-              `${language === 'fa' ? '📍 آدرس' : '📍 Address'}: (${order.deliveries[0].latitude}, ${order.deliveries[0].longitude})`,
-              `${language === 'fa' ? '🏠 جزئیات' : '🏠 Details'}: ${order.deliveries[0].addressDetails || 'N/A'}`,
-              `${language === 'fa' ? '📊 وضعیت تحویل' : '📊 Delivery status'}: ${order.deliveries[0].status || 'N/A'}`,
-              `${language === 'fa' ? '🚚 پیک' : '🚚 Courier'}: ${order.deliveries[0].courierName || 'N/A'}`,
-              `${language === 'fa' ? '📞 تلفن' : '📞 Phone'}: ${order.deliveries[0].courierPhone || 'N/A'}`,
-              `${language === 'fa' ? '📅 تاریخ تحویل' : '📅 Delivery date'}: ${order.deliveries[0].deliveryDate?.toLocaleString(language === 'fa' ? 'fa-IR' : 'en-US') || 'N/A'}`,
-            ].join('\n')
-          : language === 'fa'
-            ? '❌ اطلاعات تحویل موجود نیست'
-            : '❌ No delivery data available';
+      // const delivery =
+      //   order.deliveries && order.deliveries.length > 0
+      //     ? [
+      //         `${language === 'fa' ? '📍 آدرس' : '📍 Address'}: (${order.deliveries[0].latitude}, ${order.deliveries[0].longitude})`,
+      //         `${language === 'fa' ? '🏠 جزئیات' : '🏠 Details'}: ${order.deliveries[0].addressDetails || 'N/A'}`,
+      //         `${language === 'fa' ? '📊 وضعیت تحویل' : '📊 Delivery status'}: ${order.deliveries[0].status || 'N/A'}`,
+      //         `${language === 'fa' ? '🚚 پیک' : '🚚 Courier'}: ${order.deliveries[0].courierName || 'N/A'}`,
+      //         `${language === 'fa' ? '📞 تلفن' : '📞 Phone'}: ${order.deliveries[0].courierPhone || 'N/A'}`,
+      //         `${language === 'fa' ? '📅 تاریخ تحویل' : '📅 Delivery date'}: ${order.deliveries[0].deliveryDate?.toLocaleString(language === 'fa' ? 'fa-IR' : 'en-US') || 'N/A'}`,
+      //       ].join('\n')
+      //     : language === 'fa'
+      //       ? '❌ اطلاعات تحویل موجود نیست'
+      //       : '❌ No delivery data available';
 
       return [
         `${language === 'fa' ? '📋 سفارش' : '📋 Order'} #${order.id}`,
@@ -138,7 +138,6 @@ export function formatOrderList(
         `${language === 'fa' ? '💸 جمع کل' : '💸 Total'}: ${order.totalAmount} دلار`,
         `${language === 'fa' ? '📊 وضعیت' : '📊 Status'}: ${getOrderStatusText(order.status)}`,
         `${language === 'fa' ? '📦 محصولات' : '📦 Products'}: ${items || 'N/A'}`,
-        delivery,
         `━━━━━━━━━━━━━━━`,
       ].join('\n');
     })
